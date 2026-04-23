@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Juicy Classics</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body data-active-game="flappy">
+    <main class="game-shell">
+      <section class="intro" aria-labelledby="pageTitle">
+        <h1 id="pageTitle">Old games, made juicy</h1>
+        <p>
+          We take classic games and remake them with game-feel, feedback, and potentiality, inspired by the
+          <a href="https://github.com/grapefrukt/juicy-breakout">Juicy Breakout</a> repository by Martin Jonasson and Petri Purho.
+        </p>
+      </section>
+
+      <header class="topbar">
+        <div class="brand" aria-label="Juicy Classics">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">Juicy Classics</span>
+        </div>
+
+        <nav class="tabs" aria-label="Game selection">
+          <button class="tab is-active" type="button" data-game="flappy">Flappy</button>
+          <button class="tab" type="button" data-game="tetris">Tetris</button>
+          <button class="tab" type="button" data-game="pong">Pong</button>
+          <button class="tab" type="button" data-game="dino">Dino</button>
+          <button class="tab" type="button" data-game="breakout">Breakout</button>
+          <button class="tab" type="button" data-game="snake">Snake</button>
+        </nav>
+
+        <div class="top-actions">
+          <button class="quiet-button" id="pauseButton" type="button">Pause</button>
+          <button class="quiet-button" id="resetButton" type="button">Reset</button>
+        </div>
+      </header>
+
+      <section class="play-area" aria-label="Game">
+        <div class="stage-wrap">
+          <canvas id="gameCanvas" width="900" height="1000" aria-label="Juicy game canvas"></canvas>
+        </div>
+
+        <aside class="score-rail" aria-label="Game stats">
+          <div class="metric">
+            <span class="metric-label">Score</span>
+            <strong class="metric-value" id="scoreMetric">0</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label" id="middleMetricLabel">Lines</span>
+            <strong class="metric-value" id="middleMetric">0</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label" id="lowerMetricLabel">Level</span>
+            <strong class="metric-value" id="lowerMetric">1</strong>
+          </div>
+
+          <section class="juice-lab" id="juiceLab" aria-label="Juice Lab"></section>
+        </aside>
+      </section>
+
+      <section class="controls" aria-label="Controls">
+        <div class="control-grid is-hidden" id="tetrisControls">
+          <button type="button" data-input="left" aria-label="Left">&lt;</button>
+          <button type="button" data-input="rotate" aria-label="Rotate">R</button>
+          <button type="button" data-input="right" aria-label="Right">&gt;</button>
+          <button type="button" data-input="down" aria-label="Down">v</button>
+          <button type="button" data-input="drop" aria-label="Drop">Drop</button>
+        </div>
+
+        <div class="control-grid" id="flappyControls">
+          <button class="flap-button" type="button" data-input="flap" aria-label="Flap">Flap</button>
+        </div>
+
+        <div class="control-grid is-hidden is-pong" id="pongControls">
+          <button type="button" data-input="up" aria-label="Up">Up</button>
+          <button type="button" data-input="charge" aria-label="Serve or load">Serve / Load</button>
+          <button type="button" data-input="down" aria-label="Down">Down</button>
+        </div>
+
+        <div class="control-grid is-hidden is-dino" id="dinoControls">
+          <button type="button" data-input="dino-jump" aria-label="Jump or load">Jump / Load</button>
+          <button type="button" data-input="dino-duck" aria-label="Duck or stomp">Duck / Stomp</button>
+        </div>
+
+        <div class="control-grid is-hidden is-breakout" id="breakoutControls">
+          <button type="button" data-input="breakout-left" aria-label="Left">&lt;</button>
+          <button type="button" data-input="breakout-charge" aria-label="Launch or load">Launch / Load</button>
+          <button type="button" data-input="breakout-right" aria-label="Right">&gt;</button>
+        </div>
+
+        <div class="control-grid is-hidden is-snake" id="snakeControls">
+          <button type="button" data-input="snake-left" aria-label="Left">&lt;</button>
+          <button type="button" data-input="snake-up" aria-label="Up">Up</button>
+          <button type="button" data-input="snake-right" aria-label="Right">&gt;</button>
+          <button type="button" data-input="snake-down" aria-label="Down">Down</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./js/game.js" defer></script>
+  </body>
+</html>
