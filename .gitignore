@@ -1,0 +1,7 @@
+# Local OS, editor, and browser-test artifacts
+.DS_Store
+._*
+.playwright-cli/
+node_modules/
+.env
+.env.*

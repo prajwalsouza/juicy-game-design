@@ -1,0 +1,4364 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Juicy Watermelon Lab</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 22'%3E%3Cpath d='M2 5h22a11 11 0 0 1-22 0Z' fill='%2349764a'/%3E%3Cpath d='M4 5h18a9 9 0 0 1-18 0Z' fill='%23e45555'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Poppins", sans-serif;
+        color: #292729;
+        background: #fff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      button,
+      input,
+      output {
+        font-family: inherit;
+      }
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      .stage {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        touch-action: none;
+        cursor: crosshair;
+      }
+      .stage:focus-visible {
+        outline: 2px solid #a82f36;
+        outline-offset: -3px;
+      }
+      .stage canvas,
+      .gesture {
+        display: block;
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .gesture,
+      .hud,
+      .hint,
+      .fps {
+        pointer-events: none;
+      }
+      .hud {
+        position: fixed;
+        inset: max(20px, env(safe-area-inset-top)) clamp(16px, 4vw, 58px) auto;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .eyebrow,
+      .counts dt {
+        color: #655c60;
+        font-size: 0.65rem;
+        font-weight: 750;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .eyebrow {
+        margin: 0 0 6px;
+        color: #a82f36;
+      }
+      h1 {
+        margin: 0;
+        font:
+          500 clamp(1.4rem, 3.5vw, 2.8rem)/1.15 "Poppins",
+          sans-serif;
+        letter-spacing: -0.045em;
+      }
+      h1 em {
+        color: #a82f36;
+      }
+      .readouts {
+        display: flex;
+        align-items: flex-start;
+        gap: clamp(10px, 2vw, 24px);
+      }
+      .counts {
+        display: flex;
+        gap: clamp(12px, 2vw, 24px);
+        margin: 0;
+        white-space: nowrap;
+      }
+      .counts dd {
+        margin: 2px 0 0;
+        font:
+          1.65rem/1 "Poppins",
+          sans-serif;
+        font-variant-numeric: tabular-nums;
+      }
+      .limit {
+        color: #655c60;
+        font:
+          0.7rem "Poppins",
+          sans-serif;
+      }
+      .reset {
+        pointer-events: auto;
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border: 0;
+        border-radius: 50%;
+        color: #51434a;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .reset:hover,
+      .reset:focus-visible {
+        color: #a82f36;
+        background: #f9eef0;
+      }
+      .reset:focus-visible {
+        outline: 2px solid #a82f36;
+        outline-offset: 2px;
+      }
+      .reset.fresh {
+        width: auto;
+        padding: 0 12px;
+        border-radius: 30px;
+        display: flex;
+        gap: 7px;
+        background: #f9eef0;
+        color: #a82f36;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .reset svg {
+        width: 17px;
+        height: 17px;
+        fill: currentColor;
+      }
+      .hint,
+      .fps {
+        position: fixed;
+        bottom: max(17px, env(safe-area-inset-bottom));
+        margin: 0;
+        color: #655c60;
+        font-size: 0.77rem;
+      }
+      .hint {
+        left: 50%;
+        width: min(66%, 360px);
+        transform: translateX(-50%);
+        text-align: center;
+      }
+      .fps {
+        right: clamp(12px, 3vw, 32px);
+        font-variant-numeric: tabular-nums;
+      }
+      .error {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        margin: 0;
+        padding: 36px;
+        text-align: center;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      @media (max-width: 540px) {
+        .hud {
+          display: grid;
+          gap: 10px;
+        }
+        .readouts {
+          align-items: center;
+          gap: 8px;
+        }
+        .counts dd {
+          font-size: 1.25rem;
+        }
+        .reset {
+          margin-block: -7px;
+        }
+      }
+      .edit {
+        background: #f8eeed;
+        color: #b13243;
+      }
+      .edit[aria-expanded="true"] {
+        background: #b13243;
+        color: white;
+      }
+      .tuner {
+        position: fixed;
+        z-index: 5;
+        right: clamp(16px, 4vw, 58px);
+        top: 85px;
+        width: min(310px, calc(100vw - 32px));
+        max-height: calc(100dvh - 115px);
+        overflow: auto;
+        padding: 24px;
+        border: 1px solid #f0dddb;
+        border-radius: 24px 8px 24px 24px;
+        background: #fffcf9f7;
+        box-shadow: 0 16px 55px #4725291a;
+      }
+      .tuner h2 {
+        margin: 0;
+        font:
+          italic 29px/1.15 "Poppins",
+          sans-serif;
+        letter-spacing: -0.04em;
+        color: #a82f36;
+      }
+      .tuner p {
+        margin: 8px 0 20px;
+        color: #796568;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .tuning-row {
+        display: block;
+        margin: 18px 0;
+        font-size: 12px;
+        font-weight: 650;
+      }
+      .tuning-row span {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .tuning-row output {
+        color: #a82f36;
+        font-variant-numeric: tabular-nums;
+        font-weight: 500;
+      }
+      .tuning-row input {
+        width: 100%;
+        margin: 12px 0 0;
+        accent-color: #bb3d4d;
+        cursor: pointer;
+      }
+      .tuning-row input:focus-visible {
+        outline: 2px solid #a82f36;
+        outline-offset: 5px;
+      }
+      .tuner footer {
+        display: flex;
+        justify-content: space-between;
+        border-top: 1px solid #ecdedd;
+        padding-top: 16px;
+      }
+      .tuner button {
+        border: 0;
+        background: transparent;
+        color: #a82f36;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        padding: 6px 0;
+      }
+      .budget {
+        font-size: 10px !important;
+        margin: 15px 0 0 !important;
+      }
+      @media (max-width: 540px) {
+        .tuner {
+          top: 126px;
+          max-height: calc(100dvh - 150px);
+        }
+      }
+      .mode-switch {
+        position: fixed;
+        bottom: max(19px, env(safe-area-inset-bottom));
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 3px;
+        padding: 4px;
+        background: #f7f4f2;
+        border: 1px solid #ece5e1;
+        border-radius: 30px;
+        z-index: 4;
+      }
+      .mode-switch button {
+        border: 0;
+        border-radius: 24px;
+        background: transparent;
+        color: #827570;
+        padding: 9px 19px;
+        font:
+          500 12px Poppins,
+          sans-serif;
+        cursor: pointer;
+        min-height: 38px;
+      }
+      .mode-switch button[aria-pressed="true"] {
+        color: #a52d42;
+        background: white;
+        box-shadow: 0 2px 8px #4d232012;
+      }
+      .mode-switch button:focus-visible {
+        outline: 2px solid #a52d42;
+        outline-offset: 2px;
+      }
+      .hint {
+        bottom: max(82px, calc(env(safe-area-inset-bottom) + 70px));
+      }
+      body[data-mode="simple"] .eyebrow {
+        display: none;
+      }
+      body[data-mode="simple"] h1 {
+        font-size: clamp(22px, 3vw, 34px);
+        letter-spacing: -0.05em;
+      }
+      body[data-mode="simple"] .counts > div:first-child {
+        display: none;
+      }
+      body[data-mode="simple"] label:has(#feel-rind) {
+        display: none;
+      }
+      @media (max-width: 540px) {
+        .mode-switch button {
+          padding: 8px 17px;
+        }
+        .hint {
+          font-size: 11px;
+          width: 85%;
+        }
+        .fps {
+          bottom: 24px;
+          font-size: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body data-mode="simple">
+    <main>
+      <section
+        class="stage"
+        id="stage"
+        tabindex="0"
+        aria-label="Watermelon cutting board"
+        aria-describedby="hint"
+      >
+        <svg class="gesture" id="gesture" aria-hidden="true" hidden>
+          <line
+            id="stroke"
+            stroke="#ae4b55"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-dasharray="4 5"
+            opacity=".65"
+          />
+        </svg>
+        <p class="error" id="error" hidden></p>
+        <noscript
+          ><p class="error">
+            Enable JavaScript to use the cutting board.
+          </p></noscript
+        >
+      </section>
+      <header class="hud">
+        <div>
+          <p class="eyebrow">Juicy Experiences / 01</p>
+          <h1>Juicy <em>Watermelon</em> Lab</h1>
+        </div>
+        <div class="readouts">
+          <dl class="counts">
+            <div>
+              <dt>Cuts</dt>
+              <dd id="cuts">0</dd>
+            </div>
+            <div>
+              <dt>Pieces</dt>
+              <dd>
+                <span id="pieces">1</span>
+                <span class="limit">/ <span id="limit"></span></span>
+              </dd>
+            </div>
+          </dl>
+          <button
+            class="reset edit"
+            id="editFeel"
+            type="button"
+            aria-label="Tune the watermelon"
+            aria-controls="tuner"
+            aria-expanded="false"
+            title="Tune the feel"
+          >
+            <!-- Font Awesome Free pen, CC BY 4.0. --><svg
+              viewBox="0 0 512 544"
+              aria-hidden="true"
+            >
+              <path
+                d="M362.7 19.3c25-25 65.5-25 90.5 0l39.5 39.5c25 25 25 65.5 0 90.5l-48.1 48.1-130-130 48.1-48.1zM292 89.9l130 130L144.9 497c-5.6 5.6-12.5 9.6-20.1 11.8l-94 26.9c-8.4 2.4-17.4.1-23.6-6.1S-1.3 514.4 1.1 506l26.9-94c2.2-7.6 6.2-14.5 11.8-20.1L292 89.9z"
+              />
+            </svg></button
+          ><a
+            class="reset"
+            id="reset"
+            href="#stage"
+            aria-label="Refresh with a new watermelon"
+            title="Fresh watermelon"
+          >
+            <!-- Font Awesome Free 6.7.2 by Fonticons, Inc. https://fontawesome.com/license/free (CC BY 4.0 icons). -->
+            <svg viewBox="0 0 512 512" aria-hidden="true">
+              <path
+                d="M463.5 224l8.5 0c13.3 0 24-10.7 24-24l0-128c0-9.7-5.8-18.5-14.8-22.2s-19.3-1.7-26.2 5.2L413.4 96.6c-87.6-86.5-228.7-86.2-315.8 1c-87.5 87.5-87.5 229.3 0 316.8s229.3 87.5 316.8 0c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0c-62.5 62.5-163.8 62.5-226.3 0s-62.5-163.8 0-226.3c62.2-62.2 162.7-62.5 225.3-1L327 183c-6.9 6.9-8.9 17.2-5.2 26.2s12.5 14.8 22.2 14.8l119.5 0z"
+              />
+            </svg>
+            <span id="freshLabel" hidden>New watermelon</span>
+          </a>
+        </div>
+      </header>
+      <aside class="tuner" id="tuner" aria-label="Watermelon tuning" hidden>
+        <h2>A little more juicy?</h2>
+        <p>More wobble, more splash. Hold the fruit to give it a squeeze.</p>
+        <label class="tuning-row"
+          ><span
+            >Wobble<output id="value-softness" for="feel-softness"
+              >1</output
+            ></span
+          ><input
+            id="feel-softness"
+            data-feel="softness"
+            type="range"
+            min=".5"
+            max="3"
+            step=".1"
+            value="1" /></label
+        ><label class="tuning-row"
+          ><span
+            >Rind firmness<output id="value-rind" for="feel-rind"
+              >1</output
+            ></span
+          ><input
+            id="feel-rind"
+            data-feel="rind"
+            type="range"
+            min=".5"
+            max="3"
+            step=".1"
+            value="1" /></label
+        ><label class="tuning-row"
+          ><span
+            >Grip<output id="value-friction" for="feel-friction"
+              >.55</output
+            ></span
+          ><input
+            id="feel-friction"
+            data-feel="friction"
+            type="range"
+            min=".15"
+            max=".9"
+            step=".05"
+            value=".55" /></label
+        ><label class="tuning-row"
+          ><span
+            >Knife oomph<output id="value-cut" for="feel-cut">1</output></span
+          ><input
+            id="feel-cut"
+            data-feel="cut"
+            type="range"
+            min=".3"
+            max="2"
+            step=".1"
+            value="1" /></label
+        ><label class="tuning-row"
+          ><span
+            >Juice release<output id="value-juice" for="feel-juice"
+              >.004</output
+            ></span
+          ><input
+            id="feel-juice"
+            data-feel="juice"
+            type="range"
+            min=".001"
+            max=".010"
+            step=".001"
+            value=".004"
+        /></label>
+        <footer>
+          <button type="button" id="defaultFeel">Restore feel</button
+          ><button type="button" id="closeFeel">Back to slicing</button>
+        </footer>
+        <p class="budget" id="materialReadout">Fruit 100% · Released 0%</p>
+      </aside>
+      <p class="hint" id="hint" role="status">Loading the cutting board…</p>
+      <nav class="mode-switch" aria-label="Simulation mode">
+        <button type="button" data-mode="simple" aria-pressed="true">
+          Simple</button
+        ><button type="button" data-mode="advanced" aria-pressed="false">
+          Advanced
+        </button>
+      </nav>
+      <p class="fps" id="fps" aria-label="Frames per second">– fps</p>
+    </main>
+    <script type="module">
+      const stage = document.querySelector("#stage");
+      const hint = document.querySelector("#hint");
+      const error = document.querySelector("#error");
+      const resetLink = document.querySelector("#reset");
+
+      try {
+        const THREE =
+          await import("https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js");
+        start(THREE);
+      } catch (problem) {
+        console.error(problem);
+        hint.hidden = true;
+        error.hidden = false;
+        error.textContent =
+          "The cutting board needs WebGL 2 and a connection to load Three.js.";
+      }
+
+      function start(THREE) {
+        const vec = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+        const { clamp, lerp } = THREE.MathUtils;
+        const random = (min, max) => lerp(min, max, Math.random());
+        let mode = "simple";
+        const defaultFeel = {
+            softness: 1,
+            rind: 1,
+            friction: 0.55,
+            cut: 1,
+            juice: 0.004,
+          },
+          feel = { ...defaultFeel };
+        const reducedMotion = matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        const boardTop = 0.24;
+        const tableTop = -0.035;
+        const gravity = 11.7;
+        const onBoard = (x, z) => {
+          const dx = Math.max(0, Math.abs(x) - 2.7);
+          const dz = Math.max(0, Math.abs(z) - 1.52);
+          return dx * dx + dz * dz <= 0.255 ** 2;
+        };
+        const maxPieces = 12;
+        const maxCuts = maxPieces - 1;
+        document.querySelector("#limit").textContent = maxPieces;
+        const minVolume = 0.033;
+        const epsilon = 0.00001;
+        const pieces = [];
+        const droplets = [];
+        const pendingSpray = [];
+        const crumbs = [],
+          splashRings = [];
+        const stains = [];
+        let cuts = 0;
+        // Volume-equivalent mass proxy: uniform reference density, not measured grams.
+        // Removed kerf = released liquid + pulp; rendering-pool eviction does not erase this ledger.
+        // The 85/15 release ratio and blade width are illustrative, not fitted experimental values.
+        const materialBudget = { initial: 0, liquid: 0, pulp: 0 };
+        let drag = null;
+        let traceUntil = 0;
+        let audio;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 60);
+        camera.position.set(3.9, 3.7, 9.3);
+        camera.lookAt(0, 0.67, 0);
+        const renderer = new THREE.WebGLRenderer({
+          alpha: true,
+          antialias: true,
+        });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.16;
+        renderer.domElement.setAttribute("aria-hidden", "true");
+        stage.prepend(renderer.domElement);
+
+        scene.add(new THREE.HemisphereLight(0xffffff, 0xc5c5c5, 2.1));
+        const sun = new THREE.DirectionalLight(0xfffaf5, 2.35);
+        sun.position.set(-4, 7, 4);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(512, 512);
+        Object.assign(sun.shadow.camera, {
+          left: -5,
+          right: 5,
+          top: 5,
+          bottom: -5,
+          near: 0.1,
+          far: 18,
+        });
+        sun.shadow.normalBias = 0.019;
+        scene.add(sun);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.65);
+        fill.position.set(3, 4, -5);
+        scene.add(fill);
+
+        const surface = new THREE.Mesh(
+          new THREE.PlaneGeometry(50, 50),
+          new THREE.ShadowMaterial({ opacity: 0.16 }),
+        );
+        surface.rotation.x = -Math.PI / 2;
+        surface.position.y = tableTop;
+        surface.receiveShadow = true;
+        scene.add(surface);
+
+        function boardShape(width, depth, radius) {
+          const x = width / 2;
+          const z = depth / 2;
+          const shape = new THREE.Shape();
+          shape.moveTo(-x + radius, -z);
+          shape.lineTo(x - radius, -z);
+          shape.quadraticCurveTo(x, -z, x, -z + radius);
+          shape.lineTo(x, z - radius);
+          shape.quadraticCurveTo(x, z, x - radius, z);
+          shape.lineTo(-x + radius, z);
+          shape.quadraticCurveTo(-x, z, -x, z - radius);
+          shape.lineTo(-x, -z + radius);
+          shape.quadraticCurveTo(-x, -z, -x + radius, -z);
+          return shape;
+        }
+
+        function makeBoard() {
+          const wood = document.createElement("canvas");
+          wood.width = 1024;
+          wood.height = 512;
+          const ctx = wood.getContext("2d");
+          ctx.fillStyle = "#d9a46d";
+          ctx.fillRect(0, 0, wood.width, wood.height);
+          for (let i = 0; i < 320; i++) {
+            const y = random(0, wood.height);
+            ctx.strokeStyle =
+              i % 3
+                ? `rgba(107,58,29,${random(0.025, 0.16)})`
+                : "rgba(255,228,178,.18)";
+            ctx.lineWidth = random(0.5, 2.8);
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.bezierCurveTo(
+              250,
+              y + random(-6, 6),
+              760,
+              y + random(-6, 6),
+              1024,
+              y + random(-4, 4),
+            );
+            ctx.stroke();
+          }
+          const grain = new THREE.CanvasTexture(wood);
+          grain.colorSpace = THREE.SRGBColorSpace;
+          const geometry = new THREE.ExtrudeGeometry(
+            boardShape(5.9, 3.55, 0.29),
+            {
+              depth: 0.17,
+              bevelEnabled: true,
+              bevelThickness: 0.035,
+              bevelSize: 0.045,
+              bevelSegments: 3,
+            },
+          );
+          const uv = geometry.getAttribute("uv");
+          for (let i = 0; i < uv.count; i++)
+            uv.setXY(i, uv.getX(i) / 6 + 0.5, uv.getY(i) / 3.65 + 0.5);
+          const board = new THREE.Mesh(geometry, [
+            new THREE.MeshStandardMaterial({ map: grain, roughness: 0.74 }),
+            new THREE.MeshStandardMaterial({
+              color: 0xa5693e,
+              roughness: 0.72,
+            }),
+          ]);
+          board.rotation.x = -Math.PI / 2;
+          board.position.y = 0.035;
+          board.castShadow = true;
+          board.receiveShadow = true;
+          scene.add(board);
+
+          const groove = boardShape(5.54, 3.19, 0.24).getPoints(12);
+          const curve = new THREE.LineLoop(
+            new THREE.BufferGeometry().setFromPoints(
+              groove.map((p) => vec(p.x, boardTop + 0.002, -p.y)),
+            ),
+            new THREE.LineBasicMaterial({
+              color: 0x815739,
+              transparent: true,
+              opacity: 0.42,
+            }),
+          );
+          scene.add(curve);
+        }
+        makeBoard();
+
+        // A single seeded volume supplies mechanics and appearance; it survives subdivision.
+        const fieldSize = 24,
+          fieldWidth = 144,
+          fieldHeight = 96,
+          fieldData = new Uint8Array(fieldWidth * fieldHeight * 4);
+        const fieldHash = (x, y, z) => {
+          const v =
+            Math.sin(x * 127.1 + y * 311.7 + z * 74.7 + 19.27) * 43758.5453;
+          return v - Math.floor(v);
+        };
+        function fieldNoise(x, y, z) {
+          const ix = Math.floor(x),
+            iy = Math.floor(y),
+            iz = Math.floor(z);
+          const f = [x - ix, y - iy, z - iz].map((t) => t * t * (3 - 2 * t));
+          let value = 0;
+          for (let dz = 0; dz < 2; dz++)
+            for (let dy = 0; dy < 2; dy++)
+              for (let dx = 0; dx < 2; dx++)
+                value +=
+                  fieldHash(ix + dx, iy + dy, iz + dz) *
+                  (dx ? f[0] : 1 - f[0]) *
+                  (dy ? f[1] : 1 - f[1]) *
+                  (dz ? f[2] : 1 - f[2]);
+          return value;
+        }
+        for (let z = 0; z < fieldSize; z++)
+          for (let y = 0; y < fieldSize; y++)
+            for (let x = 0; x < fieldSize; x++) {
+              const coarse = fieldNoise(x * 0.22, y * 0.22, z * 0.22),
+                fine = fieldNoise(x * 0.83, y * 0.83, z * 0.83);
+              const i =
+                ((Math.floor(z / 6) * fieldSize + y) * fieldWidth +
+                  (z % 6) * fieldSize +
+                  x) *
+                4;
+              fieldData[i] = Math.round(255 * (0.7 * coarse + 0.3 * fine));
+              fieldData[i + 1] = Math.round(255 * fine);
+              fieldData[i + 2] = Math.round(255 * coarse);
+              fieldData[i + 3] = 255;
+            }
+        const fieldTexture = new THREE.DataTexture(
+          fieldData,
+          fieldWidth,
+          fieldHeight,
+          THREE.RGBAFormat,
+        );
+        fieldTexture.minFilter = fieldTexture.magFilter = THREE.LinearFilter;
+        fieldTexture.needsUpdate = true;
+        function tissueSample(p) {
+          const q = [(p.x + 1.9) / 3.8, (p.y + 1.7) / 1.8, p.z + 0.5].map(
+            (t) => clamp(t, 0, 1) * (fieldSize - 1),
+          );
+          let result = 0;
+          for (let dz = 0; dz < 2; dz++)
+            for (let dy = 0; dy < 2; dy++)
+              for (let dx = 0; dx < 2; dx++) {
+                const c = [dx, dy, dz].map((d, i) =>
+                  Math.min(fieldSize - 1, Math.floor(q[i]) + d),
+                );
+                const weight = [dx, dy, dz].reduce(
+                  (w, d, i) => w * (d ? q[i] % 1 : 1 - (q[i] % 1)),
+                  1,
+                );
+                const index =
+                  ((Math.floor(c[2] / 6) * fieldSize + c[1]) * fieldWidth +
+                    (c[2] % 6) * fieldSize +
+                    c[0]) *
+                  4;
+                result += (weight * fieldData[index]) / 255;
+              }
+          return result;
+        }
+
+        const fruitMaterial = new THREE.MeshPhysicalMaterial({
+          roughness: 0.52,
+          clearcoat: 0.16,
+          clearcoatRoughness: 0.38,
+        });
+        fruitMaterial.onBeforeCompile = (shader) => {
+          shader.uniforms.materialField = { value: fieldTexture };
+          shader.vertexShader = shader.vertexShader
+            .replace(
+              "#include <common>",
+              "#include <common>\nattribute vec3 materialPoint; attribute float skin; attribute float softness; varying vec3 fruitPoint; varying float fruitSkin; varying float thinEdge;",
+            )
+            .replace(
+              "#include <begin_vertex>",
+              "#include <begin_vertex>\nfruitPoint = materialPoint; fruitSkin = skin; thinEdge = softness;",
+            );
+          shader.fragmentShader = shader.fragmentShader
+            .replace(
+              "#include <common>",
+              `#include <common>
+            uniform sampler2D materialField;
+            vec3 volumeField(vec3 p){vec3 q=clamp(vec3((p.x+1.9)/3.8,(p.y+1.7)/1.8,p.z+.5),0.0,1.0)*23.0;float z=floor(q.z),next=min(23.0,z+1.0);vec2 uv=(vec2(mod(z,6.0),floor(z/6.0))*24.0+q.xy+.5)/vec2(144.0,96.0);vec2 uv2=(vec2(mod(next,6.0),floor(next/6.0))*24.0+q.xy+.5)/vec2(144.0,96.0);return mix(texture2D(materialField,uv).rgb,texture2D(materialField,uv2).rgb,fract(q.z));}
+            varying vec3 fruitPoint;
+            varying float fruitSkin;
+            varying float thinEdge;
+            float fleck(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+            float tissue(vec3 p){vec3 a=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+              return mix(mix(mix(fleck(a),fleck(a+vec3(1,0,0)),f.x),mix(fleck(a+vec3(0,1,0)),fleck(a+vec3(1,1,0)),f.x),f.y),mix(mix(fleck(a+vec3(0,0,1)),fleck(a+vec3(1,0,1)),f.x),mix(fleck(a+vec3(0,1,1)),fleck(a+vec3(1,1,1)),f.x),f.y),f.z); }`,
+            )
+            .replace(
+              "#include <color_fragment>",
+              `#include <color_fragment>
+            vec3 p = fruitPoint;
+            vec3 tissueVolume=volumeField(p);
+            float microCell=tissue(p*65.0);
+            float grain = tissueVolume.y;
+            float pulpCells = (tissueVolume.x*2.0-1.0)*3.0;
+            float radial = length(vec2(p.x / 1.83, p.y / 1.60));
+            float fade = smoothstep(.79, .96, radial);
+            vec3 pulp = mix(vec3(.72, .045, .066), vec3(.86, .116, .12), .29 + grain * .14 + fade * .25 + pulpCells * .12);
+            pulp=mix(pulp,vec3(.93,.34,.31),smoothstep(.60,.77,tissueVolume.z)*.18);
+            pulp*=(.87+.22*tissueVolume.x)*(.88+.22*microCell);
+            vec3 pith = vec3(.77, .83, .38) * (.88 + grain * .12);
+            float stripe = sin(17.0 * atan(p.y, p.x) + sin(p.z * 8.0) * .38 + sin(p.z * 14.0) * .2);
+            vec3 rind = mix(vec3(.024, .111, .041), vec3(.16, .32, .061), smoothstep(-.27, .32, stripe));
+            rind *= .83 + grain * .19;
+            vec3 color = mix(pulp, pith, smoothstep(.855, .912, radial));
+            color = mix(color, rind, max(fruitSkin, smoothstep(.947, .977, radial)));
+            diffuseColor.rgb *= color;`,
+            )
+            .replace(
+              "#include <normal_fragment_maps>",
+              `#include <normal_fragment_maps>
+            float cellHeight=(volumeField(fruitPoint).x*.002+tissue(fruitPoint*65.0)*.0013)*(1.0-fruitSkin);
+            vec3 dx=dFdx(-vViewPosition),dy=dFdy(-vViewPosition),r1=cross(dy,normal),r2=cross(normal,dx);
+            float det=dot(dx,r1);
+            normal=normalize(abs(det)*normal-sign(det)*(dFdx(cellHeight)*r1+dFdy(cellHeight)*r2));`,
+            )
+            .replace(
+              "#include <lights_fragment_end>",
+              `#include <lights_fragment_end>
+            // Thin, moist pulp transmits more of the soft light behind the fruit.
+            vec3 viewDirection = normalize(vViewPosition);
+            vec3 rimLight = normalize(vec3(-.42, .56, -.71));
+            float rim = pow(1.0 - clamp(dot(normal, viewDirection), 0.0, 1.0), 2.2);
+            float backLight = pow(max(dot(-normal, rimLight), 0.0), 1.6);
+            float pulpMask = (1.0 - fruitSkin) * (1.0 - smoothstep(.84, .91, radial));
+            float thickness = mix(.72, .065, max(thinEdge * .92, max(rim, fade * .76)));
+            vec3 transmission = exp(-thickness * vec3(1.8, 5.4, 8.0));
+            vec3 scattered = vec3(1.0, .42, .23) * transmission;
+            reflectedLight.indirectDiffuse += scattered * pulpMask
+              * (.11 + .65 * backLight + .29 * rim + .38 * thinEdge);`,
+            );
+        };
+
+        const seedGeometry = new THREE.SphereGeometry(1, 12, 8);
+        const seedMaterial = new THREE.MeshPhysicalMaterial({
+          color: 0x301810,
+          roughness: 0.36,
+          clearcoat: 0.45,
+        });
+        const seedLayout = [
+          [-1.2, -0.44, -0.4],
+          [-0.95, -0.75, 0.47],
+          [-0.68, -1.02, -0.35],
+          [-0.3, -1.12, 0.31],
+          [0.1, -1.18, -0.2],
+          [0.49, -1.03, -0.47],
+          [0.84, -0.87, 0.37],
+          [1.16, -0.51, 0.55],
+          [-0.73, -0.42, -0.51],
+          [-0.21, -0.59, 0.34],
+          [0.27, -0.63, -0.35],
+          [0.69, -0.44, 0.5],
+          [1.33, -0.3, 0.62],
+        ];
+
+        function fruitHull() {
+          const back = [];
+          const front = [];
+          const steps = 32;
+          for (let i = 0; i <= steps; i++) {
+            const angle = (Math.PI * i) / steps;
+            const contour =
+              1 +
+              0.016 * Math.sin(angle * 3 + 0.8) +
+              0.009 * Math.sin(angle * 5 - 1.2);
+            const x = 1.83 * Math.cos(angle) * contour;
+            const y = -1.6 * Math.sin(angle) * contour;
+            front.push(vec(x, y, 0.48));
+            back.push(vec(x, y, -0.48));
+          }
+          for (let i = 1; i < 8; i++) {
+            const t = i / 8,
+              x = lerp(front[steps].x, front[0].x, t),
+              y = 0.035 * Math.sin(t * Math.PI);
+            front.push(vec(x, y, 0.48));
+            back.push(vec(x, y, -0.48));
+          }
+          const faces = [
+            { points: front, skin: 0 },
+            { points: back, skin: 0 },
+          ];
+          for (let i = 0; i < front.length; i++) {
+            const next = (i + 1) % front.length;
+            faces.push({
+              points: [front[i], back[i], back[next], front[next]],
+              skin: i >= steps ? 0 : 1,
+            });
+          }
+          const inside = vec(0, -0.65, 0);
+          for (const { points } of faces) {
+            const normal = points[1]
+              .clone()
+              .sub(points[0])
+              .cross(points[2].clone().sub(points[0]));
+            if (normal.dot(inside.clone().sub(points[0])) > 0) points.reverse();
+          }
+          return faces;
+        }
+
+        function massProperties(faces) {
+          let volume = 0;
+          const center = vec();
+          for (const { points } of faces) {
+            const a = points[0];
+            for (let i = 1; i + 1 < points.length; i++) {
+              const b = points[i];
+              const c = points[i + 1];
+              const tetrahedron = a.dot(b.clone().cross(c)) / 6;
+              volume += tetrahedron;
+              center.addScaledVector(a.clone().add(b).add(c), tetrahedron / 4);
+            }
+          }
+          if (Math.abs(volume) > epsilon) center.divideScalar(volume);
+          return { center, volume: Math.abs(volume) };
+        }
+
+        function roundedFruit(faces, center) {
+          const vertices = new Map();
+          const edges = new Map();
+          const panels = faces.map((face) => {
+            const normal = vec();
+            face.points.forEach((point, i) =>
+              normal.add(
+                point.clone().cross(face.points[(i + 1) % face.points.length]),
+              ),
+            );
+            normal.normalize();
+            const corners = face.points.map((point) => {
+              const key = point
+                .toArray()
+                .map((value) => Math.round(value / epsilon))
+                .join(",");
+              if (!vertices.has(key))
+                vertices.set(key, { key, point, panels: [], arc: [] });
+              return vertices.get(key);
+            });
+            const panel = { corners, normal, skin: face.skin, cut: face.cut };
+            corners.forEach((corner) => corner.panels.push(panel));
+            for (let i = 0; i < corners.length; i++) {
+              const a = corners[i];
+              const b = corners[(i + 1) % corners.length];
+              if (a === b) continue;
+              const key = [a.key, b.key].sort().join("|");
+              if (!edges.has(key)) edges.set(key, { a, b, panels: [] });
+              edges.get(key).panels.push(panel);
+            }
+            return panel;
+          });
+          // Face-plane distances become unreliable after elastic warping. Use the
+          // piece thickness to bound a real rounded edge, rather than collapsing it to 0.001.
+          const extent = new THREE.Box3()
+            .setFromPoints([...vertices.values()].map((v) => v.point))
+            .getSize(vec());
+          const radius =
+            mode === "simple"
+              ? Math.max(
+                  0.002,
+                  Math.min(
+                    0.06,
+                    ...panels.map(
+                      (panel) =>
+                        0.28 *
+                        Math.abs(
+                          panel.normal.dot(
+                            panel.corners[0].point.clone().sub(center),
+                          ),
+                        ),
+                    ),
+                  ),
+                )
+              : Math.max(
+                  0.004,
+                  Math.min(
+                    0.045,
+                    Math.min(extent.x, extent.y, extent.z) * 0.12,
+                  ),
+                );
+          for (const corner of vertices.values()) {
+            const inset = corner.point.clone();
+            // Push the corner inside each incident face by the bevel radius.
+            for (let pass = 0; pass < 12; pass++) {
+              for (const { normal } of corner.panels) {
+                const offset =
+                  normal.dot(inset.clone().sub(corner.point)) + radius;
+                if (offset > 0) inset.addScaledVector(normal, -offset);
+              }
+            }
+            corner.inset = inset;
+          }
+
+          const positions = [];
+          const normals = [];
+          const skin = [];
+          const softness = [];
+          const materialPoints = [],
+            cutDirections = [];
+          function sample(corner, normal, color, soft) {
+            const point = corner.inset.clone().addScaledVector(normal, radius);
+            return {
+              point,
+              material: (corner.point.material ?? corner.point).clone(),
+              normal,
+              color,
+              soft,
+              cut: corner.panels.find((p) => p.cut)?.cut,
+            };
+          }
+          function triangle(a, b, c) {
+            const direction = b.point
+              .clone()
+              .sub(a.point)
+              .cross(c.point.clone().sub(a.point));
+            const winding =
+              direction.dot(a.normal.clone().add(b.normal).add(c.normal)) >= 0
+                ? [a, b, c]
+                : [a, c, b];
+            for (const point of winding) {
+              positions.push(...point.point.toArray());
+              normals.push(...point.normal.toArray());
+              skin.push(point.color);
+              softness.push(point.soft);
+              materialPoints.push(...(point.material ?? point.point).toArray());
+              cutDirections.push(...(point.cut?.travel ?? vec()).toArray());
+            }
+          }
+          for (const panel of panels) {
+            const points = panel.corners.map((corner) =>
+              sample(corner, panel.normal, panel.skin, 0),
+            );
+            const faceCenter = points
+              .reduce((sum, point) => sum.add(point.point), vec())
+              .divideScalar(points.length);
+            const middle = {
+              point: faceCenter,
+              material: points
+                .reduce((sum, p) => sum.add(p.material), vec())
+                .divideScalar(points.length),
+              normal: panel.normal,
+              color: panel.skin,
+              soft: 0,
+              cut: panel.cut,
+            };
+            for (const point of points) point.cut = panel.cut;
+            const layers =
+              mode === "simple"
+                ? 1
+                : panel.skin > 0.5
+                  ? 1
+                  : Math.min(
+                      6,
+                      Math.max(
+                        1,
+                        Math.ceil(
+                          Math.max(
+                            ...points.map((p) =>
+                              p.point.distanceTo(faceCenter),
+                            ),
+                          ) / 0.25,
+                        ),
+                      ),
+                    );
+            let previous = null;
+            for (let layer = 1; layer <= layers; layer++) {
+              const t = layer / layers,
+                ring = points.map((p) => ({
+                  ...p,
+                  point: faceCenter.clone().lerp(p.point, t),
+                  material: middle.material.clone().lerp(p.material, t),
+                }));
+              for (let i = 0; i < ring.length; i++) {
+                const j = (i + 1) % ring.length;
+                if (!previous) triangle(middle, ring[i], ring[j]);
+                else {
+                  triangle(previous[i], ring[i], ring[j]);
+                  triangle(previous[i], ring[j], previous[j]);
+                }
+              }
+              previous = ring;
+            }
+          }
+          for (const { a, b, panels: adjacent } of edges.values()) {
+            if (adjacent.length !== 2) continue;
+            const [first, last] = adjacent;
+            const steps = 3;
+            let previous;
+            for (let i = 0; i <= steps; i++) {
+              const t = i / steps;
+              const normal = first.normal
+                .clone()
+                .lerp(last.normal, t)
+                .normalize();
+              const color = lerp(first.skin, last.skin, t);
+              const soft =
+                Math.sin(t * Math.PI) *
+                Math.min(1, 1 - first.normal.dot(last.normal));
+              const pair = [
+                sample(a, normal, color, soft),
+                sample(b, normal, color, soft),
+              ];
+              a.arc.push(pair[0]);
+              b.arc.push(pair[1]);
+              if (previous) {
+                triangle(previous[0], previous[1], pair[0]);
+                triangle(previous[1], pair[1], pair[0]);
+              }
+              previous = pair;
+            }
+          }
+          for (const corner of vertices.values()) {
+            const arc = corner.arc;
+            if (arc.length < 3) continue;
+            const axis = arc
+              .reduce((sum, point) => sum.add(point.normal), vec())
+              .normalize();
+            const u = vec()
+              .crossVectors(
+                axis,
+                Math.abs(axis.y) > 0.9 ? vec(1, 0, 0) : vec(0, 1, 0),
+              )
+              .normalize();
+            const v = vec().crossVectors(axis, u);
+            const angle = (point) =>
+              Math.atan2(point.normal.dot(v), point.normal.dot(u));
+            arc.sort((a, b) => angle(a) - angle(b));
+            const middle = sample(
+              corner,
+              axis,
+              arc.reduce((sum, point) => sum + point.color, 0) / arc.length,
+              0.9,
+            );
+            for (let i = 0; i < arc.length; i++)
+              triangle(middle, arc[i], arc[(i + 1) % arc.length]);
+          }
+
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute(
+            "position",
+            new THREE.Float32BufferAttribute(positions, 3),
+          );
+          geometry.setAttribute(
+            "materialPoint",
+            new THREE.Float32BufferAttribute(materialPoints, 3),
+          );
+          geometry.setAttribute(
+            "cutDirection",
+            new THREE.Float32BufferAttribute(cutDirections, 3),
+          );
+          geometry.setAttribute(
+            "normal",
+            new THREE.Float32BufferAttribute(normals, 3),
+          );
+          geometry.setAttribute(
+            "skin",
+            new THREE.Float32BufferAttribute(skin, 1),
+          );
+          geometry.setAttribute(
+            "softness",
+            new THREE.Float32BufferAttribute(softness, 1),
+          );
+          geometry.computeBoundingSphere();
+          return {
+            geometry,
+            core: [...vertices.values()].map((corner) =>
+              corner.inset.sub(center),
+            ),
+            radius,
+          };
+        }
+
+        // A small refittable triangle BVH shared by picking and droplets. Its leaves
+        // reference the actual deformed render surface, so wet films do not float on a proxy.
+        function surfaceBVH(geometry) {
+          const a = geometry.attributes.position.array;
+          const ids = Array.from({ length: a.length / 9 }, (_, i) => i);
+          const center = (id, axis) =>
+            (a[id * 9 + axis] + a[id * 9 + 3 + axis] + a[id * 9 + 6 + axis]) /
+            3;
+          function build(ids) {
+            const node = { box: new THREE.Box3() };
+            if (ids.length <= 12) node.ids = ids;
+            else {
+              const range = [0, 1, 2].map((axis) => {
+                let min = Infinity,
+                  max = -Infinity;
+                for (const id of ids) {
+                  const v = center(id, axis);
+                  min = Math.min(min, v);
+                  max = Math.max(max, v);
+                }
+                return max - min;
+              });
+              const axis = range.indexOf(Math.max(...range));
+              ids.sort((i, j) => center(i, axis) - center(j, axis));
+              const mid = ids.length >> 1;
+              node.left = build(ids.slice(0, mid));
+              node.right = build(ids.slice(mid));
+            }
+            return node;
+          }
+          return build(ids);
+        }
+        function refitSurface(mesh) {
+          const a = mesh.geometry.attributes.position.array;
+          const tree = (mesh.geometry.userData.bvh ??= surfaceBVH(
+            mesh.geometry,
+          ));
+          function refit(node) {
+            node.box.makeEmpty();
+            if (node.ids) {
+              for (const id of node.ids)
+                for (let k = id * 9; k < id * 9 + 9; k += 3) {
+                  const lo = node.box.min,
+                    hi = node.box.max;
+                  lo.x = Math.min(lo.x, a[k]);
+                  lo.y = Math.min(lo.y, a[k + 1]);
+                  lo.z = Math.min(lo.z, a[k + 2]);
+                  hi.x = Math.max(hi.x, a[k]);
+                  hi.y = Math.max(hi.y, a[k + 1]);
+                  hi.z = Math.max(hi.z, a[k + 2]);
+                }
+            } else {
+              refit(node.left);
+              refit(node.right);
+              node.box.copy(node.left.box).union(node.right.box);
+            }
+          }
+          refit(tree);
+        }
+        function acceleratedRaycast(raycaster, hits) {
+          if (!this.geometry.userData.bvh) refitSurface(this);
+          const inverse = this.matrixWorld.clone().invert(),
+            ray = raycaster.ray.clone().applyMatrix4(inverse),
+            a = this.geometry.attributes.position.array;
+          const va = vec(),
+            vb = vec(),
+            vc = vec(),
+            point = vec(),
+            boxHit = vec();
+          let nearest = raycaster.far,
+            best = null;
+          const visit = (node) => {
+            if (!ray.intersectBox(node.box, boxHit)) return;
+            if (node.ids) {
+              for (const id of node.ids) {
+                va.fromArray(a, id * 9);
+                vb.fromArray(a, id * 9 + 3);
+                vc.fromArray(a, id * 9 + 6);
+                if (!ray.intersectTriangle(va, vb, vc, true, point)) continue;
+                const world = point.clone().applyMatrix4(this.matrixWorld),
+                  distance = world.distanceTo(raycaster.ray.origin);
+                if (distance < raycaster.near || distance > nearest) continue;
+                nearest = distance;
+                best = {
+                  distance,
+                  point: world,
+                  object: this,
+                  faceIndex: id,
+                  face: {
+                    a: id * 3,
+                    b: id * 3 + 1,
+                    c: id * 3 + 2,
+                    normal: vb
+                      .clone()
+                      .sub(va)
+                      .cross(vc.clone().sub(va))
+                      .normalize(),
+                    materialIndex: 0,
+                  },
+                };
+              }
+            } else {
+              visit(node.left);
+              visit(node.right);
+            }
+          };
+          visit(this.geometry.userData.bvh);
+          if (best) hits.push(best);
+        }
+
+        function addPiece(faces, seeds, properties, previous) {
+          const { center, volume } = properties;
+          const { geometry, core, radius } = roundedFruit(faces, center);
+          const body = new THREE.Group();
+          const mesh = new THREE.Mesh(geometry, fruitMaterial);
+          mesh.raycast = acceleratedRaycast;
+          mesh.position.copy(center).negate();
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+          body.add(mesh);
+          for (const seed of seeds) {
+            const kernel = new THREE.Mesh(seedGeometry, seedMaterial);
+            kernel.position.copy(seed.point).sub(center);
+            kernel.scale.set(0.037, 0.076, 0.019);
+            kernel.rotation.z = seed.angle;
+            body.add(kernel);
+          }
+          if (previous) {
+            body.position.copy(previous.mesh.localToWorld(center.clone()));
+            body.quaternion.copy(previous.body.quaternion);
+            body.scale.copy(previous.body.scale);
+          } else {
+            const bottom = Math.min(
+              ...faces.flatMap((face) => face.points.map((point) => point.y)),
+            );
+            body.position
+              .copy(center)
+              .add(vec(0, boardTop - bottom + 0.003, 0));
+          }
+          scene.add(body);
+          const hull = [...new Set(faces.flatMap((face) => face.points))].map(
+            (p) => p.clone().sub(center),
+          );
+          const size = new THREE.Box3().setFromPoints(hull).getSize(vec());
+          const inverseInertia = vec(
+            size.y ** 2 + size.z ** 2,
+            size.x ** 2 + size.z ** 2,
+            size.x ** 2 + size.y ** 2,
+          );
+          inverseInertia.set(
+            12 / (volume * inverseInertia.x),
+            12 / (volume * inverseInertia.y),
+            12 / (volume * inverseInertia.z),
+          );
+          const piece = {
+            body,
+            mesh,
+            faces,
+            seeds,
+            volume,
+            hull,
+            inverseInertia,
+            core,
+            radius,
+            groundPoints: core.map(() => vec()),
+            collider: makeCollider(faces, hull),
+            inverseMass: 1 / volume,
+            velocity: previous ? previous.velocity.clone() : vec(),
+            angular: previous ? previous.angular.clone() : vec(),
+            squash: previous?.squash ?? 0,
+            springVelocity: 0,
+            resting: !previous,
+            quietTime: 0,
+            dragPressure: 0,
+          };
+          if (previous)
+            piece.velocity.add(
+              vec().crossVectors(
+                previous.angular,
+                body.position.clone().sub(previous.body.position),
+              ),
+            );
+          pieces.push(piece);
+          return piece;
+        }
+
+        function removePiece(piece) {
+          pieces.splice(pieces.indexOf(piece), 1);
+          scene.remove(piece.body);
+          piece.mesh.geometry.dispose();
+        }
+
+        // Each convex half inherits its original surface polygons and gets a new cut face.
+        function splitHull(faces, plane) {
+          const halves = [[], []];
+          const seam = [];
+          for (const face of faces) {
+            const sides = [[], []];
+            for (let i = 0; i < face.points.length; i++) {
+              const a = face.points[i];
+              const b = face.points[(i + 1) % face.points.length];
+              const da = plane.distanceToPoint(a);
+              const db = plane.distanceToPoint(b);
+              if (da >= -epsilon) sides[0].push(a);
+              if (da <= epsilon) sides[1].push(a);
+              if (Math.abs(da) <= epsilon) seam.push(a);
+              if (
+                da * db < -epsilon * epsilon &&
+                Math.abs(da) > epsilon &&
+                Math.abs(db) > epsilon
+              ) {
+                const hit = a.clone().lerp(b, da / (da - db));
+                hit.material = (a.material ?? a)
+                  .clone()
+                  .lerp(b.material ?? b, da / (da - db));
+                sides[0].push(hit);
+                sides[1].push(hit);
+                seam.push(hit);
+              }
+            }
+            sides.forEach((points, i) => {
+              if (points.length >= 3)
+                halves[i].push({ points, skin: face.skin, cut: face.cut });
+            });
+          }
+          const ring = seam.filter(
+            (p, i) =>
+              seam.findIndex((q) => p.distanceToSquared(q) < epsilon ** 2) ===
+              i,
+          );
+          if (ring.length < 3) return null;
+          const origin = ring
+            .reduce((sum, p) => sum.add(p), vec())
+            .divideScalar(ring.length);
+          const u = ring[0].clone().sub(origin).normalize();
+          const v = plane.normal.clone().cross(u).normalize();
+          const angle = (p) => {
+            const delta = p.clone().sub(origin);
+            return Math.atan2(delta.dot(v), delta.dot(u));
+          };
+          ring.sort((a, b) => angle(a) - angle(b));
+          halves[0].push({ points: [...ring].reverse(), skin: 0 });
+          halves[1].push({ points: ring, skin: 0 });
+          const properties = halves.map(massProperties);
+          if (properties.some((part) => part.volume < minVolume)) return null;
+          return { halves, properties, ring, origin };
+        }
+
+        function makeKnife() {
+          const knife = new THREE.Group();
+          const outline = new THREE.Shape();
+          outline.moveTo(-1.39, -0.02);
+          outline.quadraticCurveTo(-1.22, -0.25, -0.77, -0.25);
+          outline.lineTo(0.23, -0.21);
+          outline.lineTo(0.28, 0.12);
+          outline.lineTo(-0.85, 0.13);
+          outline.quadraticCurveTo(-1.29, 0.11, -1.39, -0.02);
+          const steel = new THREE.Mesh(
+            new THREE.ExtrudeGeometry(outline, {
+              depth: 0.025,
+              bevelEnabled: true,
+              bevelSize: 0.012,
+              bevelThickness: 0.009,
+              bevelSegments: 2,
+            }),
+            new THREE.MeshStandardMaterial({
+              color: 0xdce7df,
+              metalness: 0.43,
+              roughness: 0.25,
+            }),
+          );
+          steel.castShadow = true;
+          knife.add(steel);
+          const handle = new THREE.Mesh(
+            new THREE.ExtrudeGeometry(boardShape(0.83, 0.28, 0.095), {
+              depth: 0.075,
+              bevelEnabled: true,
+              bevelSize: 0.017,
+              bevelThickness: 0.015,
+              bevelSegments: 2,
+            }),
+            new THREE.MeshStandardMaterial({
+              color: 0x30483a,
+              roughness: 0.49,
+            }),
+          );
+          handle.position.set(0.65, -0.01, -0.018);
+          handle.castShadow = true;
+          knife.add(handle);
+          const pinMaterial = new THREE.MeshStandardMaterial({
+            color: 0xd9b67a,
+            metalness: 0.4,
+            roughness: 0.32,
+          });
+          const pinGeometry = new THREE.SphereGeometry(0.028, 10, 6);
+          for (const x of [0.45, 0.83]) {
+            const pin = new THREE.Mesh(pinGeometry, pinMaterial);
+            pin.scale.z = 0.34;
+            pin.position.set(x, -0.012, 0.063);
+            knife.add(pin);
+          }
+          knife.rotation.set(-Math.PI / 2, 0, 0.23);
+          knife.position.set(1.22, boardTop + 0.045, 1.12);
+          scene.add(knife);
+          return knife;
+        }
+        const knife = makeKnife();
+        const parkedKnifePosition = knife.position.clone();
+        const parkedKnifeRotation = knife.quaternion.clone();
+
+        const dropletBatch = new THREE.InstancedMesh(
+          new THREE.SphereGeometry(1, 10, 8),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xffc2a3,
+            transparent: true,
+            opacity: 0.58,
+            depthWrite: false,
+            roughness: 0.12,
+            clearcoat: 1,
+            clearcoatRoughness: 0.08,
+          }),
+          160,
+        );
+        const stainBatch = new THREE.InstancedMesh(
+          new THREE.SphereGeometry(1, 12, 8),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xffc9b5,
+            transparent: true,
+            opacity: 0.38,
+            depthWrite: false,
+            roughness: 0.14,
+            clearcoat: 1,
+          }),
+          110,
+        );
+        const advancedStainGeometry = stainBatch.geometry;
+        const simpleStainGeometry = new THREE.CircleGeometry(1, 36).rotateX(
+          -Math.PI / 2,
+        );
+        const stainVertices = simpleStainGeometry.attributes.position;
+        for (let i = 1; i < stainVertices.count; i++) {
+          const x = stainVertices.getX(i),
+            z = stainVertices.getZ(i),
+            a = Math.atan2(z, x),
+            r = 1 + 0.11 * Math.sin(a * 3) + 0.06 * Math.sin(a * 7 + 1);
+          stainVertices.setXYZ(i, x * r, 0, z * r);
+        }
+        const splashBatch = new THREE.InstancedMesh(
+          new THREE.RingGeometry(0.8, 1, 28),
+          new THREE.MeshBasicMaterial({
+            color: 0xf7b9b1,
+            transparent: true,
+            opacity: 0.44,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+          }),
+          24,
+        );
+        const pulpBatch = new THREE.InstancedMesh(
+          new THREE.IcosahedronGeometry(1, 0),
+          new THREE.MeshStandardMaterial({ color: 0xf5757c, roughness: 0.46 }),
+          370,
+        );
+        for (const batch of [
+          dropletBatch,
+          stainBatch,
+          pulpBatch,
+          splashBatch,
+        ]) {
+          batch.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+          batch.frustumCulled = false;
+          batch.count = 0;
+          scene.add(batch);
+        }
+        const particlePose = new THREE.Object3D();
+        const up = vec(0, 1, 0);
+        const scratch = vec();
+        const spin = new THREE.Quaternion();
+
+        function spray(ring, origin, normal, energy, travel, lostVolume) {
+          if (lostVolume < 1e-10) return;
+          const count = clamp(
+            Math.ceil(lostVolume / 0.00008),
+            4,
+            reducedMotion ? 24 : 80,
+          );
+          const particleVolume =
+            (lostVolume * (mode === "simple" ? 0.85 : 1)) / count;
+          const radius = Math.cbrt((particleVolume * 3) / (4 * Math.PI));
+          materialBudget.liquid += lostVolume * 0.85;
+          materialBudget.pulp += lostVolume * 0.15;
+          if (mode === "simple") {
+            const count = Math.min(6, 96 - crumbs.length);
+            if (count > 0)
+              for (let i = 0; i < count; i++) {
+                const volume = (lostVolume * 0.15) / count;
+                crumbs.push({
+                  point: origin.clone().lerp(ring[i % ring.length], 0.65),
+                  velocity: vec(
+                    random(-1.8, 1.8),
+                    random(1.5, 3),
+                    random(-1.3, 1.3),
+                  ),
+                  size: Math.cbrt((volume * 3) / (4 * Math.PI)),
+                  volume,
+                  bounces: 0,
+                  angle: random(0, 6.28),
+                });
+              }
+            else if (crumbs.length) {
+              crumbs[0].volume += lostVolume * 0.15;
+              crumbs[0].size = Math.cbrt(
+                (crumbs[0].volume * 3) / (4 * Math.PI),
+              );
+            }
+          }
+          const front = [...ring].sort(
+            (a, b) =>
+              a.distanceToSquared(camera.position) -
+              b.distanceToSquared(camera.position),
+          );
+          for (let i = 0; i < count; i++) {
+            const point = front[0]
+              .clone()
+              .lerp(front[1], Math.random())
+              .lerp(origin, random(0, 0.18));
+            const velocity = travel.clone().multiplyScalar(random(0.15, 0.6));
+            velocity.add(
+              vec(random(-0.35, 0.35), random(0.3, 1.3), random(0.1, 0.7)),
+            );
+            velocity
+              .addScaledVector(normal, random(0.2, 0.85) * (i % 2 ? 1 : -1))
+              .multiplyScalar(
+                energy * feel.cut * (mode === "simple" ? 2.6 : 1),
+              );
+            pendingSpray.push({
+              point,
+              velocity,
+              size: radius,
+              volume: particleVolume,
+              bounces: 0,
+              pulp: mode !== "simple",
+              delay: (i / count) * 0.09,
+            });
+          }
+          mergeAirDrops(pendingSpray, 160);
+        }
+
+        const liquidRay = new THREE.Raycaster();
+        function wetBinding(mesh, face, point) {
+          const attr = mesh.geometry.attributes.position;
+          const a = vec().fromBufferAttribute(attr, face.a),
+            b = vec().fromBufferAttribute(attr, face.b),
+            c = vec().fromBufferAttribute(attr, face.c);
+          const local = mesh.worldToLocal(point.clone());
+          return {
+            ids: [face.a, face.b, face.c],
+            weights: new THREE.Triangle(a, b, c).getBarycoord(local, vec()),
+          };
+        }
+        function liquidHit(from, to) {
+          const direction = to.clone().sub(from),
+            distance = direction.length();
+          if (distance < epsilon) return null;
+          liquidRay.set(from, direction.divideScalar(distance));
+          liquidRay.far = distance + 0.004;
+          return (
+            liquidRay.intersectObjects(
+              pieces.map((p) => p.mesh),
+              false,
+            )[0] ?? null
+          );
+        }
+        function mergeWetPatches() {
+          // Prefer nearby films with similar normals. When the pool is full,
+          // relax only the normal test; keep deposits on their existing support.
+          while (stains.length > 110) {
+            let pair = null;
+            for (const requireSimilarNormals of [true, false]) {
+              let bestDistance = Infinity;
+              for (let i = 0; i < stains.length; i++) {
+                for (let j = i + 1; j < stains.length; j++) {
+                  const a = stains[i],
+                    b = stains[j];
+                  if (a.support !== b.support) continue;
+                  if (!a.support && Math.abs(a.point.y - b.point.y) > 0.02)
+                    continue;
+                  if (
+                    requireSimilarNormals &&
+                    a.normal &&
+                    b.normal &&
+                    a.normal.dot(b.normal) < 0.8
+                  )
+                    continue;
+                  const distance = a.point.distanceToSquared(b.point);
+                  if (distance < bestDistance) {
+                    bestDistance = distance;
+                    pair = [i, j];
+                  }
+                }
+              }
+              if (pair) break;
+            }
+            // With twelve fruit pieces and two ground levels a compatible pair
+            // always exists at this cap. Preserve mass even if supports are expanded later.
+            if (!pair) {
+              const film = stains.pop();
+              droplets.push({
+                point: film.point.clone(),
+                velocity: film.flow?.clone() ?? vec(),
+                size: Math.cbrt((film.volume * 3) / (4 * Math.PI)),
+                volume: film.volume,
+                pulp: film.pulp,
+                bounces: 0,
+              });
+              continue;
+            }
+            const [i, j] = pair,
+              a = stains[i],
+              b = stains[j];
+            a.volume += b.volume;
+            a.size = Math.sqrt(
+              a.volume / (((4 * Math.PI) / 3) * 0.006 * a.stretch),
+            );
+            a.pulp ||= b.pulp;
+            a.age = Math.min(a.age, b.age);
+            stains.splice(j, 1);
+          }
+        }
+        function mergeAirDrops(pool, limit) {
+          while (pool.length > limit) {
+            const b = pool.pop();
+            let a = pool[0];
+            for (const drop of pool)
+              if (
+                drop.point.distanceToSquared(b.point) <
+                a.point.distanceToSquared(b.point)
+              )
+                a = drop;
+            const total = a.volume + b.volume;
+            a.velocity
+              .multiplyScalar(a.volume / total)
+              .addScaledVector(b.velocity, b.volume / total);
+            a.volume = total;
+            a.size = Math.cbrt((total * 3) / (4 * Math.PI));
+            a.pulp ||= b.pulp;
+          }
+        }
+
+        function stepLiquid(dt) {
+          scene.updateMatrixWorld(true);
+          for (let i = pendingSpray.length - 1; i >= 0; i--) {
+            const drop = pendingSpray[i];
+            if ((drop.delay -= dt) <= 0) {
+              droplets.push(drop);
+              pendingSpray.splice(i, 1);
+            }
+          }
+          mergeAirDrops(droplets, 160);
+          for (let i = droplets.length - 1; i >= 0; i--) {
+            const drop = droplets[i];
+            const previousPoint = drop.point.clone();
+            drop.velocity.y -= 10.8 * dt;
+            drop.velocity.multiplyScalar(Math.exp(-0.45 * dt));
+            drop.point.addScaledVector(drop.velocity, dt);
+            const fruitHit = liquidHit(previousPoint, drop.point);
+            if (fruitHit) {
+              const normal = fruitHit.face.normal
+                .clone()
+                .transformDirection(fruitHit.object.matrixWorld);
+              stains.push({
+                point: fruitHit.point.clone().addScaledVector(normal, 0.004),
+                size: drop.size * 1.7,
+                stretch: 1,
+                angle: random(0, Math.PI),
+                age: 0,
+                pulp: drop.pulp,
+                volume: drop.volume,
+                binding: wetBinding(
+                  fruitHit.object,
+                  fruitHit.face,
+                  fruitHit.point,
+                ),
+                support: fruitHit.object,
+                local: fruitHit.object.worldToLocal(fruitHit.point.clone()),
+                localNormal: fruitHit.face.normal.clone(),
+                normal,
+                flow: vec(),
+              });
+              mergeWetPatches();
+              droplets.splice(i, 1);
+              continue;
+            }
+            const floor = onBoard(drop.point.x, drop.point.z)
+              ? boardTop
+              : tableTop;
+            if (drop.point.y > floor + drop.size * Math.cbrt(0.15)) continue;
+            if (
+              drop.bounces === 0 &&
+              drop.velocity.y < -2.7 &&
+              drop.size > 0.034
+            ) {
+              drop.point.y = floor + drop.size * 0.67;
+              drop.velocity.y *= -0.24;
+              drop.velocity.x *= 0.62;
+              drop.velocity.z *= 0.62;
+              drop.bounces++;
+              continue;
+            }
+            const stain = {
+              point: vec(drop.point.x, floor + 0.003, drop.point.z),
+              size: drop.size * random(1.25, 2.3),
+              stretch: random(0.75, 1.25),
+              angle: random(0, Math.PI),
+              age: 0,
+              pulp: drop.pulp,
+              volume: drop.volume,
+            };
+            stains.push(stain);
+            if (
+              mode === "simple" &&
+              splashRings.length < 24 &&
+              Math.abs(drop.velocity.y) > 0.7
+            )
+              splashRings.push({
+                point: stain.point.clone().add(vec(0, 0.001, 0)),
+                size: drop.size * 2.5,
+                age: 0,
+              });
+            mergeWetPatches();
+            droplets.splice(i, 1);
+          }
+          for (let i = stains.length - 1; i >= 0; i--) {
+            const stain = stains[i];
+            stain.age += dt;
+            if (!stain.support) continue;
+            if (!pieces.some((p) => p.mesh === stain.support)) {
+              droplets.push({
+                point: stain.point.clone(),
+                velocity: stain.flow.clone(),
+                size: Math.cbrt((stain.volume * 3) / (4 * Math.PI)),
+                volume: stain.volume,
+                pulp: stain.pulp,
+                bounces: 0,
+              });
+              stains.splice(i, 1);
+              continue;
+            }
+            if (stain.binding) {
+              const attr = stain.support.geometry.attributes.position,
+                vertices = stain.binding.ids.map((id) =>
+                  vec().fromBufferAttribute(attr, id),
+                );
+              stain.local.set(0, 0, 0);
+              vertices.forEach((p, i) =>
+                stain.local.addScaledVector(
+                  p,
+                  stain.binding.weights.getComponent(i),
+                ),
+              );
+              stain.localNormal
+                .copy(vertices[1])
+                .sub(vertices[0])
+                .cross(vertices[2].clone().sub(vertices[0]))
+                .normalize();
+            }
+            const normal = stain.localNormal
+              .clone()
+              .transformDirection(stain.support.matrixWorld);
+            const position = stain.support.localToWorld(stain.local.clone());
+            const tangentGravity = vec(0, -gravity, 0).addScaledVector(
+              normal,
+              gravity * normal.y,
+            );
+            stain.flow
+              .addScaledVector(tangentGravity, dt)
+              .multiplyScalar(Math.exp(-7 * dt));
+            const next = position.clone().addScaledVector(stain.flow, dt);
+            liquidRay.set(
+              next.clone().addScaledVector(normal, 0.025),
+              normal.clone().negate(),
+            );
+            liquidRay.far = 0.055;
+            const hit = liquidRay.intersectObject(stain.support, false)[0];
+            if (!hit) {
+              droplets.push({
+                point: next.addScaledVector(normal, 0.006),
+                velocity: stain.flow.clone(),
+                size: Math.cbrt((stain.volume * 3) / (4 * Math.PI)),
+                volume: stain.volume,
+                pulp: stain.pulp,
+                bounces: 0,
+              });
+              stains.splice(i, 1);
+              continue;
+            }
+            stain.binding = wetBinding(stain.support, hit.face, hit.point);
+            stain.local.copy(stain.support.worldToLocal(hit.point.clone()));
+            stain.localNormal.copy(hit.face.normal);
+            stain.normal = hit.face.normal
+              .clone()
+              .transformDirection(stain.support.matrixWorld);
+            stain.point.copy(hit.point).addScaledVector(stain.normal, 0.004);
+          }
+          mergeAirDrops(droplets, 160);
+        }
+
+        function stepPlayfulEffects(dt) {
+          for (const c of crumbs) {
+            if (c.resting) continue;
+            const old = c.point.clone();
+            c.velocity.y -= gravity * dt;
+            c.point.addScaledVector(c.velocity, dt);
+            c.angle += dt * c.velocity.length() * 2;
+            const hit = liquidHit(old, c.point);
+            const floor = onBoard(c.point.x, c.point.z) ? boardTop : tableTop;
+            if (hit && c.bounces === 0) {
+              c.point.copy(hit.point).addScaledVector(hit.face.normal, 0.02);
+              c.velocity.multiplyScalar(0.35);
+              c.velocity.y = Math.abs(c.velocity.y) * 0.4;
+              c.bounces++;
+            }
+            if (c.point.y < floor + c.size * 0.7) {
+              c.point.y = floor + c.size * 0.7;
+              c.velocity.y = Math.abs(c.velocity.y) * 0.25;
+              c.velocity.x *= 0.65;
+              c.velocity.z *= 0.65;
+              c.bounces++;
+              if (c.velocity.length() < 0.15 || c.bounces > 5) {
+                c.velocity.set(0, 0, 0);
+                c.resting = true;
+              }
+            }
+          }
+          for (let i = splashRings.length - 1; i >= 0; i--) {
+            splashRings[i].age += dt;
+            if (splashRings[i].age > 0.45) splashRings.splice(i, 1);
+          }
+        }
+        function paintLiquid() {
+          let pulpCount = 0;
+          const pulpAt = (point, size) => {
+            particlePose.position.copy(point);
+            particlePose.scale.set(size, size * 0.7, size * 0.8);
+            particlePose.updateMatrix();
+            pulpBatch.setMatrixAt(pulpCount++, particlePose.matrix);
+          };
+          droplets.forEach((drop, i) => {
+            const speed = drop.velocity.length();
+            const stretch = 1 + Math.min(0.95, speed * 0.16);
+            particlePose.position.copy(drop.point);
+            particlePose.scale.set(
+              drop.size / Math.sqrt(stretch),
+              drop.size * stretch,
+              drop.size / Math.sqrt(stretch),
+            );
+            particlePose.quaternion.setFromUnitVectors(
+              up,
+              scratch.copy(drop.velocity).normalize(),
+            );
+            particlePose.updateMatrix();
+            dropletBatch.setMatrixAt(i, particlePose.matrix);
+            if (drop.pulp) pulpAt(drop.point, drop.size * Math.cbrt(0.15));
+          });
+          dropletBatch.count = droplets.length;
+          dropletBatch.instanceMatrix.needsUpdate = droplets.length > 0;
+          stains.forEach((stain, i) => {
+            const spread = stain.size * (1 - 0.5 * Math.exp(-stain.age * 13));
+            particlePose.position.copy(stain.point);
+            particlePose.scale.set(spread, 0.003, spread * stain.stretch);
+            if (stain.normal)
+              particlePose.quaternion.setFromUnitVectors(up, stain.normal);
+            else particlePose.rotation.set(0, stain.angle, 0);
+            particlePose.updateMatrix();
+            stainBatch.setMatrixAt(i, particlePose.matrix);
+            if (stain.pulp)
+              pulpAt(
+                stain.point.clone().add(vec(0, 0.007, 0)),
+                Math.cbrt((stain.volume * 0.15 * 3) / (4 * Math.PI)),
+              );
+          });
+          for (const c of crumbs) {
+            particlePose.rotation.set(c.angle, c.angle * 0.7, c.angle * 0.3);
+            pulpAt(c.point, c.size);
+          }
+          splashRings.forEach((ring, i) => {
+            const t = ring.age / 0.45,
+              size = ring.size * (1 + t * 2.8);
+            particlePose.position.copy(ring.point);
+            particlePose.rotation.set(-Math.PI / 2, 0, 0);
+            particlePose.scale.set(size, size, 1 - t);
+            particlePose.updateMatrix();
+            splashBatch.setMatrixAt(i, particlePose.matrix);
+            splashBatch.setColorAt(
+              i,
+              new THREE.Color(0xf7b9b1).lerp(new THREE.Color(0xffffff), t),
+            );
+          });
+          splashBatch.count = splashRings.length;
+          splashBatch.instanceMatrix.needsUpdate = true;
+          if (splashBatch.instanceColor)
+            splashBatch.instanceColor.needsUpdate = true;
+          pulpBatch.count = pulpCount;
+          pulpBatch.instanceMatrix.needsUpdate = true;
+          stainBatch.count = stains.length;
+          stainBatch.instanceMatrix.needsUpdate = stains.length > 0;
+        }
+
+        // XPBD distance and tetrahedral volume constraints (Macklin et al., 2016).
+        // Coarse heterogeneous flesh/rind model. Parameters are illustrative, not fitted tissue data.
+        function materialVariation(p) {
+          // A smooth, fixed field in material coordinates, never per-frame random forces.
+          return tissueSample(p);
+        }
+        function refineSurface(geometry) {
+          // Conforming subdivision: neighboring faces retain identical edge vertices.
+          for (const [name, attribute] of Object.entries(geometry.attributes)) {
+            const values = [],
+              size = attribute.itemSize;
+            for (let i = 0; i < attribute.count; i += 3) {
+              const a = Array.from(
+                  { length: size },
+                  (_, k) => attribute.array[i * size + k],
+                ),
+                b = Array.from(
+                  { length: size },
+                  (_, k) => attribute.array[(i + 1) * size + k],
+                ),
+                c = Array.from(
+                  { length: size },
+                  (_, k) => attribute.array[(i + 2) * size + k],
+                );
+              const ab = a.map((v, k) => (v + b[k]) / 2),
+                ac = a.map((v, k) => (v + c[k]) / 2),
+                bc = b.map((v, k) => (v + c[k]) / 2);
+              for (const point of [a, ab, ac, ab, b, bc, ac, bc, c, ab, bc, ac])
+                values.push(...point);
+            }
+            geometry.setAttribute(
+              name,
+              new THREE.Float32BufferAttribute(values, size),
+            );
+          }
+        }
+        function makeSoftBody(piece) {
+          refineSurface(piece.mesh.geometry);
+          delete piece.mesh.geometry.userData.bvh;
+          const surface = piece.mesh.geometry.attributes.position,
+            normals = piece.mesh.geometry.attributes.normal,
+            material = piece.mesh.geometry.attributes.materialPoint;
+          const reliefGroups = new Map(),
+            reliefKeys = [];
+          for (let i = 0; i < surface.count; i++) {
+            const q = vec().fromBufferAttribute(surface, i),
+              key = q
+                .toArray()
+                .map((x) => Math.round(x * 1e6))
+                .join(",");
+            reliefKeys.push(key);
+            if (!reliefGroups.has(key))
+              reliefGroups.set(key, {
+                q,
+                m: vec(),
+                n: vec(),
+                direction: vec(),
+                flesh: 0,
+                count: 0,
+              });
+            const g = reliefGroups.get(key);
+            g.m.add(vec().fromBufferAttribute(material, i));
+            g.n.add(vec().fromBufferAttribute(normals, i));
+            g.direction.add(
+              vec().fromBufferAttribute(
+                piece.mesh.geometry.attributes.cutDirection,
+                i,
+              ),
+            );
+            g.flesh += 1 - piece.mesh.geometry.attributes.skin.getX(i);
+            g.count++;
+          }
+          for (const g of reliefGroups.values()) {
+            const { q, m, n, direction } = g;
+            m.divideScalar(g.count);
+            n.normalize();
+            direction.normalize();
+            const cells = fieldNoise(m.x * 13, m.y * 15, m.z * 13),
+              grain = fieldNoise(m.x * 37, m.y * 31, m.z * 39);
+            const across = vec().crossVectors(n, direction).normalize();
+            const groove =
+              direction.lengthSq() > 0.01
+                ? Math.pow(
+                    0.5 + 0.5 * Math.sin(q.dot(across) * 100 + cells * 4),
+                    6,
+                  )
+                : 0;
+            const relief =
+              (g.flesh / g.count) *
+              (0.004 + 0.025 * cells * cells + 0.006 * grain + 0.012 * groove);
+            q.addScaledVector(n, -relief);
+          }
+          for (let i = 0; i < surface.count; i++) {
+            const q = reliefGroups.get(reliefKeys[i]).q;
+            surface.setXYZ(i, q.x, q.y, q.z);
+          }
+          const unique = [],
+            lookup = new Map();
+          const index = (p) => {
+            const key = p
+              .toArray()
+              .map((v) => Math.round(v / epsilon))
+              .join(",");
+            if (!lookup.has(key)) {
+              lookup.set(key, unique.length);
+              const copy = p.clone();
+              copy.material = p.material?.clone() ?? p.clone();
+              unique.push(copy);
+            }
+            return lookup.get(key);
+          };
+          const faces = piece.faces.map((f) => ({
+            skin: f.skin,
+            cut: f.cut,
+            ids: f.points.map(index),
+          }));
+          const center = massProperties(piece.faces).center;
+          const centerId = unique.length;
+          center.material = unique
+            .reduce((s, p) => s.add(p.material), vec())
+            .divideScalar(unique.length);
+          unique.push(center);
+          piece.body.updateMatrixWorld(true);
+          const nodes = unique.map((p) => ({
+            material: p.material.clone(),
+            rest: p.clone(),
+            p: piece.mesh.localToWorld(p.clone()),
+            old: vec(),
+            v: piece.velocity
+              .clone()
+              .add(
+                vec().crossVectors(
+                  piece.angular,
+                  piece.mesh.localToWorld(p.clone()).sub(piece.body.position),
+                ),
+              ),
+            mass: 0,
+            w: 0,
+          }));
+          const tets = [],
+            edges = new Map();
+          const baseTets = [];
+          for (const face of faces)
+            for (let i = 1; i < face.ids.length - 1; i++)
+              baseTets.push({
+                ids: [centerId, face.ids[0], face.ids[i], face.ids[i + 1]],
+                face,
+              });
+          const midpoints = new Map();
+          const midpoint = (a, b) => {
+            const key = [a, b].sort((x, y) => x - y).join(",");
+            if (midpoints.has(key)) return midpoints.get(key);
+            const na = nodes[a],
+              nb = nodes[b],
+              id = nodes.length;
+            nodes.push({
+              rest: na.rest.clone().add(nb.rest).multiplyScalar(0.5),
+              material: na.material
+                .clone()
+                .add(nb.material)
+                .multiplyScalar(0.5),
+              p: na.p.clone().add(nb.p).multiplyScalar(0.5),
+              old: vec(),
+              v: na.v.clone().add(nb.v).multiplyScalar(0.5),
+              mass: 0,
+              w: 0,
+            });
+            midpoints.set(key, id);
+            return id;
+          };
+          const refined = [];
+          for (const {
+            ids: [a, b, c, d],
+            face,
+          } of baseTets) {
+            const ab = midpoint(a, b),
+              ac = midpoint(a, c),
+              ad = midpoint(a, d),
+              bc = midpoint(b, c),
+              bd = midpoint(b, d),
+              cd = midpoint(c, d);
+            for (const ids of [
+              [a, ab, ac, ad],
+              [ab, b, bc, bd],
+              [ac, bc, c, cd],
+              [ad, bd, cd, d],
+              [ab, ac, ad, cd],
+              [ab, ac, bc, cd],
+              [ab, ad, bd, cd],
+              [ab, bc, bd, cd],
+            ])
+              refined.push({ ids, face });
+          }
+          for (const { ids, face } of refined) {
+            const [a, b, c, d] = ids.map((id) => nodes[id].p);
+            const volume =
+              b
+                .clone()
+                .sub(a)
+                .dot(c.clone().sub(a).cross(d.clone().sub(a))) / 6;
+            if (Math.abs(volume) < 1e-9) continue;
+            tets.push({ ids, volume, lambda: 0 });
+            for (const id of ids) nodes[id].mass += Math.abs(volume) / 4;
+            for (let j = 0; j < 4; j++)
+              for (let k = j + 1; k < 4; k++) {
+                const pair = [ids[j], ids[k]].sort((a, b) => a - b),
+                  key = pair.join(",");
+                const radial = (id) => {
+                  const m = nodes[id].material;
+                  return Math.hypot(m.x / 1.83, m.y / 1.6);
+                };
+                const midpoint = nodes[ids[j]].material
+                  .clone()
+                  .add(nodes[ids[k]].material)
+                  .multiplyScalar(0.5);
+                const r = Math.min(
+                  radial(ids[j]),
+                  radial(ids[k]),
+                  Math.hypot(midpoint.x / 1.83, midpoint.y / 1.6),
+                );
+                const rind = r > 0.965;
+                const white = r > 0.86;
+                if (!edges.has(key))
+                  edges.set(key, {
+                    ids: pair,
+                    length: nodes[pair[0]].p.distanceTo(nodes[pair[1]].p),
+                    variation: materialVariation(
+                      nodes[pair[0]].material
+                        .clone()
+                        .add(nodes[pair[1]].material)
+                        .multiplyScalar(0.5),
+                    ),
+                    rind,
+                    white,
+                    volume: Math.abs(volume) / 6,
+                    lambda: 0,
+                  });
+                else {
+                  edges.get(key).rind ||= rind;
+                  edges.get(key).volume += Math.abs(volume) / 6;
+                }
+              }
+          }
+          const totalMass = nodes.reduce((s, n) => s + n.mass, 0);
+          nodes.forEach((n) => {
+            n.mass *= piece.volume / totalMass;
+            n.w = 1 / Math.max(n.mass, 0.001);
+          });
+          // Embed every rendered vertex in a tetrahedron, preserving the cut boundary.
+          for (const tet of tets) {
+            const [a, b, c, d] = tet.ids.map((id) => nodes[id].rest);
+            tet.embeddingOrigin = a;
+            tet.embeddingBounds = new THREE.Box3()
+              .setFromPoints([a, b, c, d])
+              .expandByScalar(0.01);
+            tet.embeddingInverse = new THREE.Matrix3()
+              .set(
+                b.x - a.x,
+                c.x - a.x,
+                d.x - a.x,
+                b.y - a.y,
+                c.y - a.y,
+                d.y - a.y,
+                b.z - a.z,
+                c.z - a.z,
+                d.z - a.z,
+              )
+              .invert();
+          }
+          const attribute = piece.mesh.geometry.attributes.position,
+            weights = [];
+          const positions = Array.from({ length: attribute.count }, (_, i) =>
+            vec().fromBufferAttribute(attribute, i),
+          );
+          positions.push(...piece.seeds.map((seed) => seed.point.clone()));
+          const bindingCache = new Map();
+          for (let i = 0; i < positions.length; i++) {
+            const p = positions[i],
+              key = p
+                .toArray()
+                .map((x) => Math.round(x * 1e6))
+                .join(",");
+            if (bindingCache.has(key)) {
+              weights.push(bindingCache.get(key));
+              continue;
+            }
+            let best,
+              bestPenalty = Infinity;
+            for (const tet of tets) {
+              if (!tet.embeddingBounds.containsPoint(p)) continue;
+              const w = p
+                .clone()
+                .sub(tet.embeddingOrigin)
+                .applyMatrix3(tet.embeddingInverse);
+              const bary = [1 - w.x - w.y - w.z, w.x, w.y, w.z];
+              const penalty = bary.reduce((s, v) => s + Math.max(0, -v), 0);
+              if (penalty < bestPenalty) {
+                best = { ids: tet.ids, w: bary };
+                bestPenalty = penalty;
+              }
+              if (penalty < 1e-6) break;
+            }
+            if (!best) {
+              const tet = tets.reduce((a, b) =>
+                a.embeddingOrigin.distanceToSquared(p) <
+                b.embeddingOrigin.distanceToSquared(p)
+                  ? a
+                  : b,
+              );
+              const w = p
+                .clone()
+                .sub(tet.embeddingOrigin)
+                .applyMatrix3(tet.embeddingInverse);
+              best = { ids: tet.ids, w: [1 - w.x - w.y - w.z, w.x, w.y, w.z] };
+            }
+            const total = best.w.reduce((sum, w) => sum + Math.max(0, w), 0);
+            best.w = best.w.map((w) => Math.max(0, w) / total);
+            bindingCache.set(key, best);
+            weights.push(best);
+          }
+          const materialPositions = [];
+          weights.slice(0, attribute.count).forEach((binding) => {
+            const p = vec();
+            binding.ids.forEach((id, j) =>
+              p.addScaledVector(nodes[id].material, binding.w[j]),
+            );
+            materialPositions.push(...p.toArray());
+          });
+          piece.mesh.geometry.setAttribute(
+            "materialPoint",
+            new THREE.Float32BufferAttribute(materialPositions, 3),
+          );
+          return {
+            nodes,
+            faces,
+            tets,
+            edges: [...edges.values()],
+            weights: weights.slice(0, attribute.count),
+            seedWeights: weights.slice(attribute.count),
+            center,
+            fracture: null,
+            age: 0,
+          };
+        }
+        function softPredict(piece, dt) {
+          if (piece.asleep) return;
+          const soft = (piece.soft ??= makeSoftBody(piece));
+          soft.age += dt;
+          piece.supported = false;
+          for (const n of soft.nodes) {
+            n.normalLambda = 0;
+            n.contact = null;
+            n.incoming = n.v.clone();
+            n.old.copy(n.p);
+            n.v.y -= gravity * dt;
+            if (piece.pressPoint && piece.dragPressure) {
+              const weight = Math.exp(
+                -n.p.distanceToSquared(piece.pressPoint) / 0.18,
+              );
+              n.v.addScaledVector(
+                piece.pressDirection,
+                weight * piece.dragPressure * 120 * dt,
+              );
+            }
+            n.v.multiplyScalar(Math.exp(-1.2 * dt));
+            n.p.addScaledVector(n.v, dt);
+          }
+          for (const edge of soft.edges) edge.lambda = 0;
+          for (const tet of soft.tets) tet.lambda = 0;
+        }
+        function softConstrain(piece, dt) {
+          if (piece.asleep) return;
+          const soft = piece.soft;
+          for (const e of soft.edges) {
+            const a = soft.nodes[e.ids[0]],
+              b = soft.nodes[e.ids[1]],
+              dx = b.p.x - a.p.x,
+              dy = b.p.y - a.p.y,
+              dz = b.p.z - a.p.z,
+              length = Math.hypot(dx, dy, dz);
+            if (length < epsilon) continue;
+            const modulus =
+                (e.rind
+                  ? 300000 * feel.rind
+                  : e.white
+                    ? 50000 * Math.sqrt(feel.rind / feel.softness)
+                    : 12000 / feel.softness) *
+                (0.35 + 1.3 * e.variation),
+              compliance =
+                (e.length * e.length) / (modulus * Math.max(e.volume, 1e-7)),
+              alpha = compliance / (dt * dt);
+            const dl =
+              (-(length - e.length) - alpha * e.lambda) / (a.w + b.w + alpha);
+            e.lambda += dl;
+            const sa = (-a.w * dl) / length,
+              sb = (b.w * dl) / length;
+            a.p.x += dx * sa;
+            a.p.y += dy * sa;
+            a.p.z += dz * sa;
+            b.p.x += dx * sb;
+            b.p.y += dy * sb;
+            b.p.z += dz * sb;
+            e.strain = (length - e.length) / e.length;
+          }
+          for (const t of soft.tets) {
+            const a = soft.nodes[t.ids[0]],
+              b = soft.nodes[t.ids[1]],
+              c = soft.nodes[t.ids[2]],
+              d = soft.nodes[t.ids[3]];
+            const bx = b.p.x - a.p.x,
+              by = b.p.y - a.p.y,
+              bz = b.p.z - a.p.z,
+              cx = c.p.x - a.p.x,
+              cy = c.p.y - a.p.y,
+              cz = c.p.z - a.p.z,
+              dx = d.p.x - a.p.x,
+              dy = d.p.y - a.p.y,
+              dz = d.p.z - a.p.z;
+            const gbx = (cy * dz - cz * dy) / 6,
+              gby = (cz * dx - cx * dz) / 6,
+              gbz = (cx * dy - cy * dx) / 6;
+            const gcx = (dy * bz - dz * by) / 6,
+              gcy = (dz * bx - dx * bz) / 6,
+              gcz = (dx * by - dy * bx) / 6;
+            const gdx = (by * cz - bz * cy) / 6,
+              gdy = (bz * cx - bx * cz) / 6,
+              gdz = (bx * cy - by * cx) / 6;
+            const gax = -gbx - gcx - gdx,
+              gay = -gby - gcy - gdy,
+              gaz = -gbz - gcz - gdz;
+            const volume = bx * gbx + by * gby + bz * gbz,
+              alpha = 2e-8 / (dt * dt);
+            const denom =
+              a.w * (gax * gax + gay * gay + gaz * gaz) +
+              b.w * (gbx * gbx + gby * gby + gbz * gbz) +
+              c.w * (gcx * gcx + gcy * gcy + gcz * gcz) +
+              d.w * (gdx * gdx + gdy * gdy + gdz * gdz) +
+              alpha;
+            const dl =
+              (-(volume - t.volume) - alpha * t.lambda) /
+              Math.max(denom, 1e-12);
+            t.lambda += dl;
+            a.p.x += a.w * dl * gax;
+            a.p.y += a.w * dl * gay;
+            a.p.z += a.w * dl * gaz;
+            b.p.x += b.w * dl * gbx;
+            b.p.y += b.w * dl * gby;
+            b.p.z += b.w * dl * gbz;
+            c.p.x += c.w * dl * gcx;
+            c.p.y += c.w * dl * gcy;
+            c.p.z += c.w * dl * gcz;
+            d.p.x += d.w * dl * gdx;
+            d.p.y += d.w * dl * gdy;
+            d.p.z += d.w * dl * gdz;
+          }
+          for (let pass = 0; pass < 4; pass++)
+            for (const e of soft.edges) {
+              if (!e.rind) continue;
+              const a = soft.nodes[e.ids[0]],
+                b = soft.nodes[e.ids[1]],
+                dx = b.p.x - a.p.x,
+                dy = b.p.y - a.p.y,
+                dz = b.p.z - a.p.z,
+                l = Math.hypot(dx, dy, dz);
+              if (l < epsilon) continue;
+              const target = clamp(l, e.length * 0.975, e.length * 1.025),
+                delta = (l - target) / ((a.w + b.w) * l);
+              a.p.x += a.w * delta * dx;
+              a.p.y += a.w * delta * dy;
+              a.p.z += a.w * delta * dz;
+              b.p.x -= b.w * delta * dx;
+              b.p.y -= b.w * delta * dy;
+              b.p.z -= b.w * delta * dz;
+            }
+          for (const n of soft.nodes) {
+            const beforeContact = n.p.clone();
+            // Swept top/side tests for the finite solid board and the surrounding table.
+            if (n.p.y < tableTop + 0.003) {
+              n.p.y = tableTop + 0.003;
+              n.contact = vec(0, 1, 0);
+            }
+            if (
+              onBoard(n.p.x, n.p.z) &&
+              n.p.y < boardTop + 0.003 &&
+              n.p.y > -0.01
+            ) {
+              const top = boardTop + 0.003 - n.p.y,
+                sideX = 2.96 - Math.abs(n.p.x),
+                sideZ = 1.78 - Math.abs(n.p.z);
+              if (
+                n.old.y >= boardTop - 0.006 ||
+                top <= Math.min(sideX, sideZ)
+              ) {
+                n.p.y = boardTop + 0.003;
+                n.contact = vec(0, 1, 0);
+              } else if (sideX < sideZ) {
+                n.p.x = Math.sign(n.p.x) * 2.96;
+                n.contact = vec(Math.sign(n.p.x), 0, 0);
+              } else {
+                n.p.z = Math.sign(n.p.z) * 1.78;
+                n.contact = vec(0, 0, Math.sign(n.p.z));
+              }
+            }
+            if (n.contact)
+              n.normalLambda +=
+                Math.max(0, n.p.clone().sub(beforeContact).dot(n.contact)) /
+                n.w;
+          }
+        }
+        function softSync(piece, dt) {
+          if (piece.asleep) return;
+          const soft = piece.soft;
+          piece.body.position.set(0, 0, 0);
+          piece.body.quaternion.identity();
+          piece.body.scale.set(1, 1, 1);
+          piece.mesh.position.set(0, 0, 0);
+          piece.velocity.set(0, 0, 0);
+          let mass = 0;
+          for (const n of soft.nodes) {
+            n.v.copy(n.p).sub(n.old).divideScalar(dt);
+            if (n.contact) {
+              const normalSpeed = n.v.dot(n.contact);
+              n.v.addScaledVector(n.contact, -normalSpeed);
+              const normalImpulse = (n.normalLambda * n.w) / dt;
+              const speed = n.v.length();
+              const surfaceVariation = materialVariation(n.p);
+              const staticFriction =
+                  ((0.58 + 0.12 * surfaceVariation) * feel.friction) / 0.55,
+                dynamicFriction =
+                  ((0.36 + 0.12 * surfaceVariation) * feel.friction) / 0.55;
+              if (speed <= staticFriction * normalImpulse) n.v.set(0, 0, 0);
+              else
+                n.v.multiplyScalar(
+                  Math.max(0, 1 - (dynamicFriction * normalImpulse) / speed),
+                );
+            }
+            const floor = onBoard(n.p.x, n.p.z) ? boardTop : tableTop;
+            if (n.p.y <= floor + 0.004) {
+              n.v.y = 0;
+            }
+            piece.velocity.addScaledVector(n.v, n.mass);
+            mass += n.mass;
+          }
+          piece.velocity.divideScalar(mass);
+          soft.seedWeights.forEach((binding, i) => {
+            const p = vec();
+            binding.ids.forEach((id, j) =>
+              p.addScaledVector(soft.nodes[id].p, binding.w[j]),
+            );
+            piece.seeds[i].point.copy(p);
+          });
+          // Dissipate internal strain motion while preserving total linear momentum.
+          const decay = Math.exp(-18 * dt);
+          for (const n of soft.nodes)
+            n.v.sub(piece.velocity).multiplyScalar(decay).add(piece.velocity);
+          piece.supported = soft.nodes.some((n) => n.contact?.y > 0.5);
+          for (const edge of soft.edges) {
+            const [ea, eb] = edge.ids.map((id) => soft.nodes[id]);
+            const settledStrain =
+              (ea.p.distanceTo(eb.p) - edge.length) / edge.length;
+            edge.damage = Math.max(
+              0,
+              (edge.damage ?? 0) +
+                (settledStrain >
+                (edge.rind ? 0.24 : edge.white ? 0.12 : 0.055) *
+                  (0.8 + 0.4 * edge.variation)
+                  ? dt
+                  : -2 * dt),
+            );
+            if (soft.age > 0.5 && edge.damage > 0.05 && edge.length > 0.15) {
+              const [a, b] = edge.ids.map((i) => soft.nodes[i]);
+              soft.fracture = { a: a.p.clone(), b: b.p.clone() };
+            }
+          }
+          piece.faces = soft.faces.map((f) => ({
+            skin: f.skin,
+            cut: f.cut,
+            points: f.ids.map((i) => {
+              const point = soft.nodes[i].p.clone();
+              point.material = soft.nodes[i].material.clone();
+              return point;
+            }),
+          }));
+        }
+        const bridges = [];
+        function bridgeCut(a, b, plane, depth, travel = vec(0, -1, 0)) {
+          a.soft ??= makeSoftBody(a);
+          b.soft ??= makeSoftBody(b);
+          const seam = a.soft.nodes.filter(
+            (n) => Math.abs(plane.distanceToPoint(n.p)) < 0.018,
+          );
+          if (!seam.length) return;
+          const axis = travel
+            .clone()
+            .addScaledVector(plane.normal, -travel.dot(plane.normal));
+          if (axis.lengthSq() < epsilon)
+            axis.crossVectors(
+              plane.normal,
+              Math.abs(plane.normal.z) < 0.8 ? vec(0, 0, 1) : vec(1, 0, 0),
+            );
+          axis.normalize();
+          const low = Math.min(...seam.map((n) => n.p.dot(axis))),
+            high = Math.max(...seam.map((n) => n.p.dot(axis)));
+          const links = [];
+          for (const na of seam) {
+            if (na.p.dot(axis) < low + (high - low) * depth) continue;
+            const nb = b.soft.nodes.reduce((best, n) =>
+              n.p.distanceToSquared(na.p) < best.p.distanceToSquared(na.p)
+                ? n
+                : best,
+            );
+            const m = na.material,
+              radial = Math.hypot(m.x / 1.83, m.y / 1.6);
+            links.push({
+              a: na,
+              b: nb,
+              rest: na.p.distanceTo(nb.p),
+              limit: radial > 0.965 ? 0.2 : radial > 0.86 ? 0.1 : 0.035,
+              lambda: 0,
+            });
+          }
+          if (links.length) bridges.push({ a, b, links });
+        }
+        function solveBridges(dt) {
+          for (let k = bridges.length - 1; k >= 0; k--) {
+            const bridge = bridges[k];
+            if (bridge.a.asleep && bridge.b.asleep) continue;
+            if (!pieces.includes(bridge.a) || !pieces.includes(bridge.b)) {
+              bridges.splice(k, 1);
+              continue;
+            }
+            for (let i = bridge.links.length - 1; i >= 0; i--) {
+              const link = bridge.links[i],
+                delta = link.b.p.clone().sub(link.a.p),
+                distance = delta.length();
+              if (distance - link.rest > link.limit) {
+                bridge.links.splice(i, 1);
+                continue;
+              }
+              if (distance < epsilon) continue;
+              const alpha = 1e-7 / (dt * dt),
+                dl =
+                  (-(distance - link.rest) - alpha * link.lambda) /
+                  (link.a.w + link.b.w + alpha);
+              link.lambda += dl;
+              delta.multiplyScalar(dl / distance);
+              link.a.p.addScaledVector(delta, -link.a.w);
+              link.b.p.addScaledVector(delta, link.b.w);
+            }
+            if (!bridge.links.length) {
+              bridges.splice(k, 1);
+              hint.textContent = "The remaining tissue tore";
+            }
+          }
+        }
+        let sleepTime = 0;
+        function wakeMaterial() {
+          sleepTime = 0;
+          for (const p of pieces) {
+            p.asleep = false;
+            p.sleepReference = null;
+            p.sleepTimer = 0;
+            p.quietSupportTime = 0;
+          }
+        }
+        function refreshSoftCollider(piece) {
+          const nodes = piece.soft.nodes,
+            center = piece.body.position;
+          if (piece.hull.length !== nodes.length) {
+            piece.hull = nodes.map(() => vec());
+            piece.groundPoints = nodes.map(() => vec());
+            piece.collider = {
+              points: piece.hull,
+              bounds: new THREE.Box3(),
+              normals: [],
+              edges: [],
+              worldNormals: [],
+              worldEdges: [],
+            };
+          }
+          piece.core = piece.hull;
+          piece.radius = 0;
+          piece.collider.points = piece.hull;
+          for (let i = 0; i < nodes.length; i++) {
+            piece.hull[i].copy(nodes[i].p).sub(center);
+            piece.groundPoints[i].copy(piece.hull[i]);
+          }
+          piece.collider.bounds.setFromPoints(piece.hull);
+        }
+        function syncSoftFaces(piece) {
+          piece.faces = piece.soft.faces.map((f) => ({
+            skin: f.skin,
+            cut: f.cut,
+            points: f.ids.map((i) => {
+              const point = piece.soft.nodes[i].p.clone();
+              point.material = piece.soft.nodes[i].material.clone();
+              return point;
+            }),
+          }));
+        }
+        function poseCorrection(piece, translation, rotation) {
+          const center = piece.body.position.clone(),
+            angle = rotation.length();
+          const q =
+            angle > 1e-10
+              ? new THREE.Quaternion().setFromAxisAngle(
+                  rotation.clone().divideScalar(angle),
+                  Math.min(angle, 0.06),
+                )
+              : new THREE.Quaternion();
+          for (const n of piece.soft.nodes) {
+            n.p.sub(center).applyQuaternion(q).add(center).add(translation);
+            n.old.sub(center).applyQuaternion(q).add(center).add(translation);
+          }
+          piece.body.position.add(translation);
+          piece.mesh.position.copy(piece.body.position).negate();
+          refreshSoftCollider(piece);
+          piece.materialDirty = true;
+        }
+        function smoothSurface(geometry) {
+          geometry.computeVertexNormals();
+          const normals = geometry.attributes.normal,
+            material = geometry.attributes.materialPoint,
+            skin = geometry.attributes.skin;
+          let weld = geometry.userData.normalWeld;
+          if (!weld) {
+            const groups = new Map(),
+              ids = new Uint32Array(normals.count);
+            for (let i = 0; i < normals.count; i++) {
+              const key = [
+                material.getX(i),
+                material.getY(i),
+                material.getZ(i),
+                skin.getX(i),
+              ]
+                .map((v) => Math.round(v * 10000))
+                .join(",");
+              if (!groups.has(key)) groups.set(key, groups.size);
+              ids[i] = groups.get(key);
+            }
+            weld = geometry.userData.normalWeld = {
+              ids,
+              sums: new Float32Array(groups.size * 3),
+            };
+          }
+          weld.sums.fill(0);
+          for (let i = 0; i < normals.count; i++) {
+            const j = weld.ids[i] * 3;
+            weld.sums[j] += normals.getX(i);
+            weld.sums[j + 1] += normals.getY(i);
+            weld.sums[j + 2] += normals.getZ(i);
+          }
+          for (let j = 0; j < weld.sums.length; j += 3) {
+            const length =
+              Math.hypot(weld.sums[j], weld.sums[j + 1], weld.sums[j + 2]) || 1;
+            weld.sums[j] /= length;
+            weld.sums[j + 1] /= length;
+            weld.sums[j + 2] /= length;
+          }
+          for (let i = 0; i < normals.count; i++) {
+            const j = weld.ids[i] * 3;
+            normals.setXYZ(i, weld.sums[j], weld.sums[j + 1], weld.sums[j + 2]);
+          }
+          normals.needsUpdate = true;
+        }
+        function drawMaterial(piece) {
+          const attribute = piece.mesh.geometry.attributes.position,
+            array = attribute.array;
+          piece.soft.weights.forEach((binding, i) => {
+            let x = 0,
+              y = 0,
+              z = 0;
+            for (let j = 0; j < 4; j++) {
+              const node = piece.soft.nodes[binding.ids[j]].p,
+                w = binding.w[j];
+              x += node.x * w;
+              y += node.y * w;
+              z += node.z * w;
+            }
+            array[i * 3] = x;
+            array[i * 3 + 1] = y;
+            array[i * 3 + 2] = z;
+          });
+          piece.soft.seedWeights.forEach((binding, i) => {
+            const point = vec();
+            binding.ids.forEach((id, j) =>
+              point.addScaledVector(piece.soft.nodes[id].p, binding.w[j]),
+            );
+            piece.seeds[i].point.copy(point);
+            piece.body.children[i + 1].position
+              .copy(point)
+              .sub(piece.body.position);
+          });
+          refitSurface(piece.mesh);
+          attribute.needsUpdate = true;
+          piece.mesh.position.copy(piece.body.position).negate();
+          piece.surfaceDirty = true;
+        }
+
+        function softStep(dt) {
+          if (pieces.length && pieces.every((p) => p.asleep)) return;
+          for (const p of pieces) p.soft ??= makeSoftBody(p);
+          const previousEnergy = pieces.reduce(
+            (sum, p) =>
+              sum +
+              p.soft.nodes.reduce(
+                (v, n) => v + n.mass * (0.5 * n.v.lengthSq() + gravity * n.p.y),
+                0,
+              ),
+            0,
+          );
+          for (const bridge of bridges) {
+            if (!bridge.a.asleep || !bridge.b.asleep) {
+              bridge.a.asleep = bridge.b.asleep = false;
+            }
+            for (const link of bridge.links) link.lambda = 0;
+          }
+          for (const p of pieces) softPredict(p, dt);
+          for (let iteration = 0; iteration < 6; iteration++) {
+            for (const p of pieces) softConstrain(p, dt);
+            solveBridges(dt);
+          }
+          for (const p of pieces) {
+            softSync(p, dt);
+            const center = p.soft.nodes
+              .reduce((s, n) => s.addScaledVector(n.p, n.mass), vec())
+              .divideScalar(p.soft.nodes.reduce((s, n) => s + n.mass, 0));
+            p.body.position.copy(center);
+            const inertia = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+            for (const node of p.soft.nodes) {
+              const r = node.p.clone().sub(center),
+                m = node.mass;
+              inertia[0] += m * (r.y * r.y + r.z * r.z);
+              inertia[4] += m * (r.x * r.x + r.z * r.z);
+              inertia[8] += m * (r.x * r.x + r.y * r.y);
+              inertia[1] -= m * r.x * r.y;
+              inertia[2] -= m * r.x * r.z;
+              inertia[5] -= m * r.y * r.z;
+            }
+            inertia[3] = inertia[1];
+            inertia[6] = inertia[2];
+            inertia[7] = inertia[5];
+            p.soft.inertia = new THREE.Matrix3().fromArray(inertia).invert();
+            p.mesh.position.copy(center).negate();
+            p.seeds.forEach((seed, i) =>
+              p.body.children[i + 1]?.position.copy(seed.point).sub(center),
+            );
+            refreshSoftCollider(p);
+          }
+          // Nonpenetration translations act on all material nodes, not just the rendering group.
+          for (let pass = 0; pass < 16; pass++) {
+            let changed = false;
+            for (let i = 0; i < pieces.length; i++)
+              for (let j = i + 1; j < pieces.length; j++) {
+                const a = pieces[i],
+                  b = pieces[j];
+
+                const contact = findContact(a, b);
+                if (!contact || contact.depth < 0.0002) continue;
+                if (
+                  contact.depth > 0.001 ||
+                  a.velocity.length() + b.velocity.length() > 0.08
+                ) {
+                  a.asleep = b.asleep = false;
+                  a.quietSupportTime = b.quietSupportTime = 0;
+                }
+                if (contact.normal.y > 0.35) b.supported = true;
+                if (contact.normal.y < -0.35) a.supported = true;
+                const contactPoint = supportOffset(a.collider, contact.normal)
+                  .add(a.body.position)
+                  .add(
+                    supportOffset(
+                      b.collider,
+                      contact.normal.clone().negate(),
+                    ).add(b.body.position),
+                  )
+                  .multiplyScalar(0.5);
+                const armA = contactPoint.clone().sub(a.body.position),
+                  armB = contactPoint.clone().sub(b.body.position);
+                const torqueA = armA.clone().cross(contact.normal),
+                  torqueB = armB.clone().cross(contact.normal);
+                const denom =
+                  a.inverseMass +
+                  b.inverseMass +
+                  torqueA.dot(torqueA.clone().applyMatrix3(a.soft.inertia)) +
+                  torqueB.dot(torqueB.clone().applyMatrix3(b.soft.inertia));
+                const correction = (contact.depth + 0.0001) / denom;
+                if (pass < 8) {
+                  poseCorrection(
+                    a,
+                    contact.normal
+                      .clone()
+                      .multiplyScalar(-correction * a.inverseMass),
+                    torqueA
+                      .applyMatrix3(a.soft.inertia)
+                      .multiplyScalar(-correction),
+                  );
+                  poseCorrection(
+                    b,
+                    contact.normal
+                      .clone()
+                      .multiplyScalar(correction * b.inverseMass),
+                    torqueB
+                      .applyMatrix3(b.soft.inertia)
+                      .multiplyScalar(correction),
+                  );
+                } else {
+                  // Final projection uses translation only, allocating upward correction
+                  // to the upper body instead of repeatedly pushing its support into the board.
+                  const distance = contact.depth + 0.0002,
+                    ny = contact.normal.y;
+                  const roomA =
+                    ny > epsilon
+                      ? Math.max(0, groundContact(a).gap) / ny
+                      : Infinity;
+                  const roomB =
+                    ny < -epsilon
+                      ? Math.max(0, groundContact(b).gap) / -ny
+                      : Infinity;
+                  const share = clamp(
+                    (distance * a.inverseMass) /
+                      (a.inverseMass + b.inverseMass),
+                    Math.max(0, distance - roomB),
+                    Math.min(distance, roomA),
+                  );
+                  poseCorrection(
+                    a,
+                    contact.normal.clone().multiplyScalar(-share),
+                    vec(),
+                  );
+                  poseCorrection(
+                    b,
+                    contact.normal.clone().multiplyScalar(distance - share),
+                    vec(),
+                  );
+                }
+                const support = (p, axis) => {
+                  const far = Math.max(
+                    ...p.soft.nodes.map((n) => n.p.dot(axis)),
+                  );
+                  return p.soft.nodes.filter(
+                    (n) => n.p.dot(axis) > far - 0.025,
+                  );
+                };
+                const an = support(a, contact.normal),
+                  bn = support(b, contact.normal.clone().negate());
+                const average = (nodes) =>
+                  nodes
+                    .reduce((s, n) => s.add(n.v), vec())
+                    .divideScalar(nodes.length);
+
+                const point = an
+                  .reduce((v, n) => v.add(n.p), vec())
+                  .divideScalar(an.length)
+                  .add(
+                    bn
+                      .reduce((v, n) => v.add(n.p), vec())
+                      .divideScalar(bn.length),
+                  )
+                  .multiplyScalar(0.5);
+                const ra = point.clone().sub(a.body.position),
+                  rb = point.clone().sub(b.body.position);
+                const contactMotion = (p, arm) => {
+                  const linear = vec(),
+                    momentum = vec();
+                  for (const node of p.soft.nodes) {
+                    linear.addScaledVector(node.v, node.mass);
+                    momentum.addScaledVector(
+                      node.p.clone().sub(p.body.position).cross(node.v),
+                      node.mass,
+                    );
+                  }
+                  return linear
+                    .multiplyScalar(p.inverseMass)
+                    .add(momentum.applyMatrix3(p.soft.inertia).cross(arm));
+                };
+                const relative = contactMotion(a, ra).sub(contactMotion(b, rb));
+                const effectiveFor = (axis) => {
+                  const ca = ra.clone().cross(axis),
+                    cb = rb.clone().cross(axis);
+                  return (
+                    a.inverseMass +
+                    b.inverseMass +
+                    ca.dot(ca.clone().applyMatrix3(a.soft.inertia)) +
+                    cb.dot(cb.clone().applyMatrix3(b.soft.inertia))
+                  );
+                };
+                const normalImpulse =
+                  Math.max(0, relative.dot(contact.normal)) /
+                  effectiveFor(contact.normal);
+                const impulse = contact.normal
+                  .clone()
+                  .multiplyScalar(normalImpulse);
+                const tangent = relative
+                  .clone()
+                  .addScaledVector(
+                    contact.normal,
+                    -relative.dot(contact.normal),
+                  );
+                const speed = tangent.length();
+                if (speed > epsilon) {
+                  tangent.divideScalar(speed);
+                  impulse.addScaledVector(
+                    tangent,
+                    Math.min(
+                      speed / effectiveFor(tangent),
+                      ((0.45 * feel.friction) / 0.55) * normalImpulse,
+                    ),
+                  );
+                }
+                for (const [p, arm, sign] of [
+                  [a, ra, -1],
+                  [b, rb, 1],
+                ]) {
+                  const rotation = arm
+                    .clone()
+                    .cross(impulse)
+                    .applyMatrix3(p.soft.inertia)
+                    .multiplyScalar(sign);
+                  const translation = impulse
+                    .clone()
+                    .multiplyScalar(sign * p.inverseMass);
+                  for (const node of p.soft.nodes)
+                    node.v
+                      .add(translation)
+                      .add(
+                        rotation
+                          .clone()
+                          .cross(node.p.clone().sub(p.body.position)),
+                      );
+                }
+                changed = true;
+              }
+            for (const p of pieces) {
+              const gap = groundContact(p).gap;
+              solidBoard ??= boardCollider();
+              const boardContact = findContact(solidBoard, p);
+              if (gap < 0 || boardContact) {
+                const delta =
+                  gap < 0
+                    ? vec(0, -gap + 0.0001, 0)
+                    : boardContact.normal
+                        .clone()
+                        .multiplyScalar(boardContact.depth + 0.0001);
+                p.body.position.add(delta);
+                for (const n of p.soft.nodes) {
+                  n.p.add(delta);
+                  n.old.add(delta);
+                }
+                refreshSoftCollider(p);
+                p.materialDirty = true;
+                changed = true;
+              }
+            }
+            if (!changed) break;
+          }
+          for (const p of pieces) {
+            syncSoftFaces(p);
+            if (!p.asleep) p.materialDirty = true;
+          }
+          // The body-level tangential mode must receive the transmitted support
+          // friction too; a single light contact node cannot represent the full load.
+          for (const p of pieces) {
+            if (!p.supported || p.asleep) continue;
+            const mean = p.soft.nodes.reduce(
+              (v, n) => v.addScaledVector(n.v, n.mass * p.inverseMass),
+              vec(),
+            );
+            const tangent = vec(mean.x, 0, mean.z),
+              speed = tangent.length();
+            const normalVelocity = gravity * dt;
+            for (const n of p.soft.nodes) n.v.y -= mean.y;
+            const removed =
+              speed < ((0.65 * feel.friction) / 0.55) * normalVelocity
+                ? speed
+                : Math.min(
+                    speed,
+                    ((0.42 * feel.friction) / 0.55) * normalVelocity,
+                  );
+            if (speed > epsilon) {
+              tangent.multiplyScalar(removed / speed);
+              for (const n of p.soft.nodes) n.v.sub(tangent);
+            }
+          }
+          // Passive contact correction: separating penetrations must not create
+          // kinetic energy by lifting an already crowded pile. Flesh is strongly dissipative.
+          let potential = 0,
+            kinetic = 0;
+          for (const p of pieces)
+            for (const n of p.soft.nodes) {
+              potential += n.mass * gravity * n.p.y;
+              kinetic += 0.5 * n.mass * n.v.lengthSq();
+            }
+          const available = Math.max(0, previousEnergy - potential);
+          if (kinetic > available && kinetic > epsilon) {
+            const scale = Math.sqrt(available / kinetic);
+            for (const p of pieces)
+              for (const n of p.soft.nodes) n.v.multiplyScalar(scale);
+          }
+          for (const p of pieces) {
+            p.velocity.set(0, 0, 0);
+            for (const n of p.soft.nodes)
+              p.velocity.addScaledVector(n.v, n.mass * p.inverseMass);
+          }
+
+          for (const p of [...pieces]) {
+            if (boardFull()) break;
+            if (!p.soft.fracture) continue;
+            const { a, b } = p.soft.fracture;
+            p.soft.fracture = null;
+            const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+              b.clone().sub(a).normalize(),
+              a.clone().add(b).multiplyScalar(0.5),
+            );
+            scene.updateMatrixWorld(true);
+            if (
+              splitPiece(
+                p,
+                plane,
+                0.2,
+                vec(0, -1, 0),
+                true,
+                p.faces.some((face) => face.skin > 0.5) ? 0.65 : 1,
+              )
+            ) {
+              updateCounts();
+              break;
+            }
+          }
+          // Sleep stable supported bodies independently; impacts and cutting wake them.
+          for (const p of pieces) {
+            const unresolved = pieces.some(
+              (other) =>
+                other !== p && (findContact(p, other)?.depth ?? 0) > 0.001,
+            );
+            if (unresolved) {
+              p.asleep = false;
+              p.quietSupportTime = 0;
+              p.sleepTimer = 0;
+              p.sleepReference = null;
+              continue;
+            }
+            if (p.asleep) continue;
+            p.soft ??= makeSoftBody(p);
+            p.sleepReference ??= p.soft.nodes.map((n) => n.p.clone());
+            const meanSpeed2 =
+              p.soft.nodes.reduce(
+                (sum, n) => sum + n.mass * n.v.lengthSq(),
+                0,
+              ) * p.inverseMass;
+            const settled =
+              p.supported &&
+              meanSpeed2 < 0.0025 &&
+              !p.dragPressure &&
+              p.soft.nodes.every(
+                (n) => n.p.distanceToSquared(n.old) < 0.005 ** 2,
+              );
+            p.quietSupportTime = settled ? (p.quietSupportTime ?? 0) + dt : 0;
+            const moved = p.soft.nodes.some(
+              (n, i) => n.p.distanceToSquared(p.sleepReference[i]) > 0.015 ** 2,
+            );
+            if (moved || !p.supported) {
+              p.sleepTimer = 0;
+              p.sleepReference = p.soft.nodes.map((n) => n.p.clone());
+            } else p.sleepTimer = (p.sleepTimer ?? 0) + dt;
+            if (
+              !p.dragPressure &&
+              (p.sleepTimer > 0.5 || p.quietSupportTime > 0.8)
+            ) {
+              p.asleep = true;
+              p.velocity.set(0, 0, 0);
+              for (const n of p.soft.nodes) n.v.set(0, 0, 0);
+            }
+          }
+        }
+
+        function stepPiece(piece, dt) {
+          const { body, velocity, angular } = piece;
+          const playful = mode === "simple";
+          const springTarget =
+            -piece.dragPressure * (playful ? 2.2 * feel.softness : 1);
+          piece.springVelocity +=
+            ((springTarget - piece.squash) *
+              (playful ? 150 / Math.sqrt(feel.softness) : 320) -
+              piece.springVelocity * (playful ? 7 : 28)) *
+            dt;
+          piece.squash = clamp(
+            piece.squash + piece.springVelocity * dt,
+            playful ? -0.2 : -0.035,
+            playful ? 0.15 : 0.012,
+          );
+          const height = 1 + piece.squash;
+          const width = 1 / Math.sqrt(height);
+          body.scale.set(width, height, width);
+
+          if (!piece.resting) {
+            velocity.y -= gravity * dt;
+            velocity.clampLength(0, 6);
+            angular.clampLength(0, 8);
+            body.position.addScaledVector(velocity, dt);
+            const angularSpeed = angular.length();
+            if (angularSpeed > epsilon) {
+              spin.setFromAxisAngle(
+                scratch.copy(angular).divideScalar(angularSpeed),
+                angularSpeed * dt,
+              );
+              body.quaternion.premultiply(spin).normalize();
+            }
+            angular.multiplyScalar(Math.exp(-0.55 * dt));
+          }
+
+          updateCollider(piece);
+          const ground = groundContact(piece);
+          if (ground.gap > 0.002) {
+            piece.quietTime = 0;
+            piece.resting = false;
+            return;
+          }
+          piece.body.position.y -= Math.min(0, ground.gap);
+          if (piece.resting) return;
+
+          const { arm, span } = ground;
+          const verticalSpeed = contactVelocity(piece, arm).y;
+          const bounce = verticalSpeed < -1.1 ? (playful ? 0.16 : 0.025) : 0;
+          const support = Math.max(
+            0,
+            (-verticalSpeed * (1 + bounce)) / resistance(piece, arm, up),
+          );
+          applyImpulse(piece, arm, up, support);
+          frictionImpulse(piece, arm, null, null, up, support, 0.72);
+          if (verticalSpeed < -0.65)
+            piece.springVelocity -= Math.min(
+              playful ? 1.1 : 0.35,
+              -verticalSpeed * (playful ? 0.24 : 0.08),
+            );
+
+          // Rolling resistance damps small rocking motions. An off-center
+          // support still produces torque through the normal impulse above.
+          angular.multiplyScalar(Math.exp(-(span > 0.17 ? 8 : 2.6) * dt));
+          velocity.x *= Math.exp(-1.8 * dt);
+          velocity.z *= Math.exp(-1.8 * dt);
+          const stable = Math.hypot(arm.x, arm.z) < 0.07 || span > 0.24;
+          const quiet =
+            velocity.lengthSq() < 0.0025 &&
+            angular.lengthSq() < 0.008 &&
+            Math.abs(piece.squash) < 0.009;
+          piece.quietTime = stable && quiet ? piece.quietTime + dt : 0;
+          if (piece.quietTime > 0.4) {
+            piece.resting = true;
+            velocity.set(0, 0, 0);
+            angular.set(0, 0, 0);
+          }
+        }
+
+        function simpleStep(dt) {
+          for (const p of pieces) stepPiece(p, dt);
+          resolveContacts();
+        }
+        function groundContact(piece) {
+          const { position } = piece.body;
+          let gap = Infinity;
+          const contacts = [];
+          for (const point of piece.groundPoints) {
+            const floor = onBoard(position.x + point.x, position.z + point.z)
+              ? boardTop
+              : tableTop;
+            const distance = position.y + point.y - floor;
+            gap = Math.min(gap, distance);
+            contacts.push({ point, distance });
+          }
+          const arm = vec();
+          let count = 0;
+          const support = new THREE.Box3();
+          for (const { point, distance } of contacts) {
+            if (distance > gap + 0.014) continue;
+            arm.add(point);
+            support.expandByPoint(point);
+            count++;
+          }
+          const span = support.getSize(vec());
+          return {
+            gap,
+            arm: arm.divideScalar(count),
+            span: Math.hypot(span.x, span.z),
+          };
+        }
+
+        function inverseInertiaAt(piece, torque) {
+          const rotation = piece.body.quaternion;
+          return torque
+            .applyQuaternion(rotation.clone().invert())
+            .multiply(piece.inverseInertia)
+            .applyQuaternion(rotation);
+        }
+
+        function resistance(piece, arm, axis) {
+          const torque = vec().crossVectors(arm, axis);
+          return (
+            piece.inverseMass +
+            torque.dot(inverseInertiaAt(piece, torque.clone()))
+          );
+        }
+
+        function contactVelocity(piece, arm) {
+          return vec().crossVectors(piece.angular, arm).add(piece.velocity);
+        }
+
+        function applyImpulse(piece, arm, axis, impulse) {
+          piece.velocity.addScaledVector(axis, impulse * piece.inverseMass);
+          piece.angular.addScaledVector(
+            inverseInertiaAt(piece, vec().crossVectors(arm, axis)),
+            impulse,
+          );
+        }
+
+        function frictionImpulse(a, armA, b, armB, normal, support, friction) {
+          const relative = contactVelocity(a, armA);
+          if (b) relative.sub(contactVelocity(b, armB));
+          relative.addScaledVector(normal, -relative.dot(normal));
+          const speed = relative.length();
+          if (speed < epsilon) return;
+          const axis = relative.divideScalar(speed);
+          const effectiveMass =
+            resistance(a, armA, axis) + (b ? resistance(b, armB, axis) : 0);
+          const impulse = Math.min(
+            speed / effectiveMass,
+            friction * support * (mode === "simple" ? feel.friction / 0.55 : 1),
+          );
+          applyImpulse(a, armA, axis, -impulse);
+          if (b) applyImpulse(b, armB, axis, impulse);
+        }
+
+        function addAxis(axes, direction) {
+          if (direction.lengthSq() < epsilon ** 2) return;
+          direction.normalize();
+          if (axes.every((axis) => Math.abs(axis.dot(direction)) < 0.999999))
+            axes.push(direction);
+        }
+
+        function makeCollider(faces, hull) {
+          const normals = [];
+          const edges = [];
+          for (const { points } of faces) {
+            const normal = vec();
+            for (let i = 0; i < points.length; i++) {
+              const next = points[(i + 1) % points.length];
+              normal.add(points[i].clone().cross(next));
+              addAxis(edges, next.clone().sub(points[i]));
+            }
+            addAxis(normals, normal);
+          }
+          return {
+            normals,
+            edges,
+            bounds: new THREE.Box3(),
+            points: hull.map(() => vec()),
+            worldNormals: normals.map(() => vec()),
+            worldEdges: edges.map(() => vec()),
+          };
+        }
+
+        function updateCollider({
+          body,
+          hull,
+          collider,
+          core,
+          radius,
+          groundPoints,
+        }) {
+          const down = vec(0, -1, 0)
+            .applyQuaternion(body.quaternion.clone().invert())
+            .multiply(body.scale);
+          down
+            .normalize()
+            .multiplyScalar(radius)
+            .multiply(body.scale)
+            .applyQuaternion(body.quaternion);
+          core.forEach((point, i) => {
+            groundPoints[i]
+              .copy(point)
+              .multiply(body.scale)
+              .applyQuaternion(body.quaternion)
+              .add(down);
+          });
+          for (let i = 0; i < hull.length; i++) {
+            collider.points[i]
+              .copy(hull[i])
+              .multiply(body.scale)
+              .applyQuaternion(body.quaternion);
+          }
+          collider.bounds.setFromPoints(collider.points);
+          const inverseScale = vec(
+            1 / body.scale.x,
+            1 / body.scale.y,
+            1 / body.scale.z,
+          );
+          collider.normals.forEach((normal, i) => {
+            collider.worldNormals[i]
+              .copy(normal)
+              .multiply(inverseScale)
+              .applyQuaternion(body.quaternion)
+              .normalize();
+          });
+          collider.edges.forEach((edge, i) => {
+            collider.worldEdges[i]
+              .copy(edge)
+              .multiply(body.scale)
+              .applyQuaternion(body.quaternion)
+              .normalize();
+          });
+        }
+
+        function boundsOverlap(a, b) {
+          const aBox = a.collider.bounds;
+          const bBox = b.collider.bounds;
+          for (const axis of ["x", "y", "z"]) {
+            const shift = b.body.position[axis] - a.body.position[axis];
+            if (
+              aBox.max[axis] <= bBox.min[axis] + shift ||
+              bBox.max[axis] + shift <= aBox.min[axis]
+            )
+              return false;
+          }
+          return true;
+        }
+
+        // Separating-axis test on the same deformed convex hulls used to draw the fruit.
+        // Support-mapped convex intersection (GJK) and penetration depth (EPA).
+        // Avoids the quadratic edge-pair enumeration of SAT on deformed envelopes.
+        function findContact(a, b) {
+          if (!boundsOverlap(a, b)) return null;
+          const support = (direction) => {
+            let pa = a.collider.points[0],
+              pb = b.collider.points[0],
+              da = -Infinity,
+              db = Infinity;
+            for (const p of a.collider.points) {
+              const d = p.dot(direction);
+              if (d > da) {
+                da = d;
+                pa = p;
+              }
+            }
+            for (const p of b.collider.points) {
+              const d = p.dot(direction);
+              if (d < db) {
+                db = d;
+                pb = p;
+              }
+            }
+            return pa.clone().add(a.body.position).sub(pb).sub(b.body.position);
+          };
+          const triple = (a, b, c) => a.clone().cross(b).cross(c);
+          let direction = b.body.position.clone().sub(a.body.position);
+          if (direction.lengthSq() < 1e-12) direction.set(1, 0.1, 0.2);
+          let simplex = [support(direction)];
+          direction = simplex[0].clone().negate();
+          function line(A, B, AO) {
+            const AB = B.clone().sub(A);
+            if (AB.dot(AO) > 0) {
+              simplex = [B, A];
+              direction = triple(AB, AO, AB);
+              if (direction.lengthSq() < 1e-16)
+                direction = AB.clone().cross(
+                  Math.abs(AB.x) < 0.8 ? vec(1, 0, 0) : vec(0, 1, 0),
+                );
+            } else {
+              simplex = [A];
+              direction = AO;
+            }
+            return false;
+          }
+          function triangle(A, B, C) {
+            const AO = A.clone().negate(),
+              AB = B.clone().sub(A),
+              AC = C.clone().sub(A),
+              normal = AB.clone().cross(AC);
+            if (normal.clone().cross(AC).dot(AO) > 0) {
+              if (AC.dot(AO) > 0) {
+                simplex = [C, A];
+                direction = triple(AC, AO, AC);
+                return false;
+              }
+              return line(A, B, AO);
+            }
+            if (AB.clone().cross(normal).dot(AO) > 0) return line(A, B, AO);
+            if (normal.dot(AO) > 0) {
+              simplex = [C, B, A];
+              direction = normal;
+            } else {
+              simplex = [B, C, A];
+              direction = normal.negate();
+            }
+            return false;
+          }
+          let enclosed = false;
+          for (let iteration = 0; iteration < 32; iteration++) {
+            if (direction.lengthSq() < 1e-18) return null;
+            const A = support(direction);
+            if (A.dot(direction) < 1e-10) return null;
+            if (simplex.some((p) => p.distanceToSquared(A) < 1e-18))
+              return null;
+            simplex.push(A);
+            if (simplex.length === 2) {
+              line(A, simplex[0], A.clone().negate());
+              continue;
+            }
+            if (simplex.length === 3) {
+              triangle(A, simplex[1], simplex[0]);
+              continue;
+            }
+            const B = simplex[2],
+              C = simplex[1],
+              D = simplex[0],
+              AO = A.clone().negate();
+            let outside = false;
+            for (const [u, v, other] of [
+              [B, C, D],
+              [C, D, B],
+              [D, B, C],
+            ]) {
+              const normal = u.clone().sub(A).cross(v.clone().sub(A));
+              if (normal.dot(other.clone().sub(A)) > 0) normal.negate();
+              if (normal.dot(AO) > 1e-10) {
+                simplex = [v, u, A];
+                direction = normal;
+                outside = true;
+                break;
+              }
+            }
+            if (!outside) {
+              enclosed = true;
+              break;
+            }
+          }
+          if (!enclosed) return null;
+          const vertices = [...simplex];
+          let faces = [];
+          function face(i, j, k) {
+            const normal = vertices[j]
+              .clone()
+              .sub(vertices[i])
+              .cross(vertices[k].clone().sub(vertices[i]));
+            const length = normal.length();
+            if (length < 1e-10) return null;
+            normal.divideScalar(length);
+            let distance = normal.dot(vertices[i]);
+            if (distance < 0) {
+              [j, k] = [k, j];
+              normal.negate();
+              distance = -distance;
+            }
+            return { ids: [i, j, k], normal, distance };
+          }
+          for (const ids of [
+            [0, 1, 2],
+            [0, 3, 1],
+            [0, 2, 3],
+            [1, 3, 2],
+          ]) {
+            const f = face(...ids);
+            if (f) faces.push(f);
+          }
+          let nearest;
+          for (let iteration = 0; iteration < 40 && faces.length; iteration++) {
+            nearest = faces.reduce((best, f) =>
+              f.distance < best.distance ? f : best,
+            );
+            const point = support(nearest.normal),
+              advance = point.dot(nearest.normal) - nearest.distance;
+            if (
+              advance < 0.00004 ||
+              vertices.some((v) => v.distanceToSquared(point) < 1e-16)
+            )
+              return nearest.distance > 0.00001
+                ? { normal: nearest.normal, depth: nearest.distance }
+                : null;
+            const index = vertices.length;
+            vertices.push(point);
+            const boundary = [];
+            const edge = (i, j) => {
+              const reverse = boundary.findIndex(
+                (e) => e[0] === j && e[1] === i,
+              );
+              if (reverse >= 0) boundary.splice(reverse, 1);
+              else boundary.push([i, j]);
+            };
+            faces = faces.filter((f) => {
+              if (f.normal.dot(point.clone().sub(vertices[f.ids[0]])) <= 1e-8)
+                return true;
+              edge(f.ids[0], f.ids[1]);
+              edge(f.ids[1], f.ids[2]);
+              edge(f.ids[2], f.ids[0]);
+              return false;
+            });
+            for (const [i, j] of boundary) {
+              const f = face(i, j, index);
+              if (f) faces.push(f);
+            }
+            if (faces.length > 200) break;
+          }
+          return nearest && nearest.distance > 0.00001
+            ? { normal: nearest.normal, depth: nearest.distance }
+            : null;
+        }
+
+        function supportOffset(collider, direction) {
+          let farthest = -Infinity;
+          for (const point of collider.points)
+            farthest = Math.max(farthest, point.dot(direction));
+          const offset = vec();
+          let count = 0;
+          for (const point of collider.points) {
+            if (point.dot(direction) >= farthest - 0.015) {
+              offset.add(point);
+              count++;
+            }
+          }
+          return offset.divideScalar(count);
+        }
+
+        function separate(a, b, { normal, depth }) {
+          const separation = depth + 0.0003;
+          const aFloor = normal.y > epsilon ? groundContact(a).gap : 0;
+          const bFloor = normal.y < -epsilon ? groundContact(b).gap : 0;
+          const aRoom =
+            normal.y > epsilon ? Math.max(0, aFloor) / normal.y : Infinity;
+          const bRoom =
+            normal.y < -epsilon ? Math.max(0, bFloor) / -normal.y : Infinity;
+          const aShare = clamp(
+            (separation * a.inverseMass) / (a.inverseMass + b.inverseMass),
+            Math.max(0, separation - bRoom),
+            Math.min(separation, aRoom),
+          );
+          a.body.position.addScaledVector(normal, -aShare);
+          b.body.position.addScaledVector(normal, separation - aShare);
+          if (aShare > 0.0003) a.resting = false;
+          if (separation - aShare > 0.0003) b.resting = false;
+        }
+
+        function contactImpulse(a, b, normal) {
+          const contactPoint = supportOffset(a.collider, normal)
+            .add(a.body.position)
+            .add(
+              supportOffset(b.collider, normal.clone().negate()).add(
+                b.body.position,
+              ),
+            )
+            .multiplyScalar(0.5);
+          const armA = contactPoint.clone().sub(a.body.position);
+          const armB = contactPoint.clone().sub(b.body.position);
+          const closing = contactVelocity(a, armA)
+            .sub(contactVelocity(b, armB))
+            .dot(normal);
+          if (closing <= 0) return;
+          const effectiveMass =
+            resistance(a, armA, normal) + resistance(b, armB, normal);
+          const impulse = (closing * (closing > 1 ? 1.04 : 1)) / effectiveMass;
+          applyImpulse(a, armA, normal, -impulse);
+          applyImpulse(b, armB, normal, impulse);
+          frictionImpulse(a, armA, b, armB, normal, impulse, 0.65);
+          if (closing > 0.8) {
+            a.springVelocity -= Math.min(0.18, impulse * a.inverseMass * 0.07);
+            b.springVelocity -= Math.min(0.18, impulse * b.inverseMass * 0.07);
+          }
+          if (closing < 0.6) {
+            // Dissipation from flesh deformation at sustained contact.
+            a.angular.multiplyScalar(0.94);
+            b.angular.multiplyScalar(0.94);
+            a.velocity.multiplyScalar(0.98);
+            b.velocity.multiplyScalar(0.98);
+          }
+          if (closing > 0.2) a.quietTime = b.quietTime = 0;
+          a.resting = b.resting = false;
+        }
+
+        function resolveContacts() {
+          // Resolve chains of contacts within the same step before presenting the frame.
+          for (let pass = 0; pass < (mode === "simple" ? 12 : 32); pass++) {
+            let changed = false;
+            for (let i = 0; i < pieces.length; i++) {
+              const a = pieces[i];
+              for (let j = i + 1; j < pieces.length; j++) {
+                const b = pieces[j];
+                const contact = findContact(a, b);
+                if (!contact) continue;
+                separate(a, b, contact);
+                contactImpulse(a, b, contact.normal);
+                changed = true;
+              }
+            }
+            for (const piece of pieces) {
+              const gap = groundContact(piece).gap;
+              if (gap < 0) piece.body.position.y -= gap;
+              resolveBoard(piece);
+            }
+            if (!changed) return;
+          }
+          // Unresolved contacts continue in the next 120 Hz substep; never teleport a pile upward.
+        }
+
+        // A finite, solid convex slab, including side walls and underside.
+        // Top support uses the rounded fruit; side contacts use its conservative hull.
+        let solidBoard;
+        function boardCollider() {
+          const ring = boardShape(5.9, 3.55, 0.29)
+            .getPoints(4)
+            .map((p) => vec(p.x, 0, -p.y));
+          ring.pop();
+          const bottom = ring.map((p) => vec(p.x, 0, p.z));
+          const top = ring.map((p) => vec(p.x, boardTop, p.z));
+          const faces = [{ points: bottom }, { points: [...top].reverse() }];
+          for (let i = 0; i < ring.length; i++) {
+            const j = (i + 1) % ring.length;
+            faces.push({ points: [bottom[i], bottom[j], top[j], top[i]] });
+          }
+          const hull = [...bottom, ...top];
+          const body = new THREE.Group();
+          const collider = makeCollider(faces, hull);
+          const board = {
+            body,
+            hull,
+            collider,
+            core: hull,
+            radius: 0,
+            groundPoints: hull.map(() => vec()),
+          };
+          updateCollider(board);
+          return board;
+        }
+        function resolveBoard(piece) {
+          solidBoard ??= boardCollider();
+          const hit = findContact(solidBoard, piece);
+          if (!hit) return;
+          // The dedicated support manifold handles the top, avoiding a bevel-sized air gap.
+          if (hit.normal.y > 0.8) {
+            const ground = groundContact(piece);
+            if (ground.gap < 0.006) return;
+          }
+          piece.body.position.addScaledVector(hit.normal, hit.depth + 0.0001);
+          const arm = supportOffset(
+            piece.collider,
+            hit.normal.clone().negate(),
+          );
+          const closing = contactVelocity(piece, arm).dot(hit.normal);
+          if (closing < 0) {
+            const impulse = -closing / resistance(piece, arm, hit.normal);
+            applyImpulse(piece, arm, hit.normal, impulse);
+            frictionImpulse(piece, arm, null, null, hit.normal, impulse, 0.65);
+          }
+          piece.resting = false;
+        }
+
+        function sound(energy) {
+          const Audio = window.AudioContext || window.webkitAudioContext;
+          if (!Audio) return;
+          try {
+            audio ??= new Audio();
+            if (audio.state === "suspended") audio.resume().catch(() => {});
+            const duration = 0.16;
+            const buffer = audio.createBuffer(
+              1,
+              Math.round(audio.sampleRate * duration),
+              audio.sampleRate,
+            );
+            const noise = buffer.getChannelData(0);
+            for (let i = 0; i < noise.length; i++)
+              noise[i] = random(-1, 1) * (1 - i / noise.length) ** 2;
+            const source = audio.createBufferSource();
+            source.buffer = buffer;
+            const filter = audio.createBiquadFilter();
+            filter.type = "lowpass";
+            filter.frequency.setValueAtTime(2200 * energy, audio.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(
+              280,
+              audio.currentTime + duration,
+            );
+            const gain = audio.createGain();
+            gain.gain.value = 0.22;
+            source.connect(filter).connect(gain).connect(audio.destination);
+            source.start();
+          } catch {
+            // Audio is optional in browsers that restrict playback.
+          }
+        }
+
+        const svg = document.querySelector("#gesture");
+        const stroke = document.querySelector("#stroke");
+        const fps = document.querySelector("#fps");
+        const knifeBasis = new THREE.Matrix4();
+        const cutsValue = document.querySelector("#cuts");
+        const piecesValue = document.querySelector("#pieces");
+        const raycaster = new THREE.Raycaster();
+        const canvas = renderer.domElement;
+
+        function resize() {
+          const { width, height } = stage.getBoundingClientRect();
+          if (!width || !height) return;
+          camera.aspect = width / height;
+          camera.fov = Math.max(
+            28,
+            THREE.MathUtils.radToDeg(2 * Math.atan(0.335 / camera.aspect)),
+          );
+          camera.updateProjectionMatrix();
+          renderer.setSize(stage.clientWidth, stage.clientHeight, false);
+          svg.setAttribute(
+            "viewBox",
+            `0 0 ${stage.clientWidth} ${stage.clientHeight}`,
+          );
+        }
+
+        function point(event) {
+          const box = canvas.getBoundingClientRect();
+          return new THREE.Vector2(
+            event.clientX - box.left,
+            event.clientY - box.top,
+          );
+        }
+
+        function ndc(point) {
+          return new THREE.Vector2(
+            (2 * point.x) / stage.clientWidth - 1,
+            1 - (2 * point.y) / stage.clientHeight,
+          );
+        }
+
+        function throughScreen(point) {
+          const p = ndc(point);
+          return vec(p.x, p.y, 0.5).unproject(camera);
+        }
+
+        function showStroke(from, to, trace = true) {
+          stroke.setAttribute("x1", from.x);
+          stroke.setAttribute("y1", from.y);
+          stroke.setAttribute("x2", to.x);
+          stroke.setAttribute("y2", to.y);
+          svg.toggleAttribute("hidden", !trace);
+          positionKnife(from, to);
+        }
+
+        function positionKnife(from, to) {
+          const backwards = throughScreen(from).sub(throughScreen(to));
+          if (backwards.lengthSq() < epsilon)
+            backwards
+              .copy(throughScreen(to.clone().add(new THREE.Vector2(35, -23))))
+              .sub(throughScreen(to));
+          backwards.normalize();
+          const outward = camera.getWorldDirection(vec()).negate();
+          const sideways = vec().crossVectors(outward, backwards).normalize();
+          knife.quaternion.setFromRotationMatrix(
+            knifeBasis.makeBasis(backwards, sideways, outward),
+          );
+          const ray = throughScreen(to).sub(camera.position);
+          knife.position
+            .copy(camera.position)
+            .addScaledVector(ray, 7.65 / -ray.dot(outward))
+            .addScaledVector(backwards, 1.39);
+        }
+
+        function updateCounts() {
+          const released = materialBudget.liquid + materialBudget.pulp,
+            percent = materialBudget.initial
+              ? (100 * released) / materialBudget.initial
+              : 0;
+          document.querySelector("#materialReadout").textContent =
+            `Fruit ${(100 - percent).toFixed(1)}% · Released ${percent.toFixed(1)}%`;
+          cutsValue.textContent = cuts;
+          piecesValue.textContent = pieces.length;
+          resetLink.classList.toggle("fresh", boardFull());
+          document.querySelector("#freshLabel").hidden = !boardFull();
+        }
+
+        function boardFull() {
+          return cuts >= maxCuts || pieces.length >= maxPieces;
+        }
+
+        function splitPiece(
+          piece,
+          worldPlane,
+          energy,
+          travel = vec(0, -1, 0),
+          fracture = false,
+          depth = 1,
+        ) {
+          wakeMaterial();
+          const inverse = piece.mesh.matrixWorld.clone().invert();
+          const localPlane = worldPlane.clone().applyMatrix4(inverse);
+          const middle = splitHull(piece.faces, localPlane);
+          if (!middle) return false;
+          // Finite kerf: the blade removes a thin band. All spray comes from this band.
+          const kerf = fracture ? 0 : feel.juice * (mode === "simple" ? 3 : 1);
+          const positivePlane = localPlane.clone();
+          positivePlane.constant -= kerf / 2;
+          const negativePlane = localPlane.clone();
+          negativePlane.constant += kerf / 2;
+          const upper = splitHull(piece.faces, positivePlane),
+            lower = splitHull(piece.faces, negativePlane);
+          if (!upper || !lower) return false;
+          const split = {
+            halves: [upper.halves[0], lower.halves[1]],
+            properties: [upper.properties[0], lower.properties[1]],
+            ring: middle.ring,
+            origin: middle.origin,
+          };
+          const currentVolume = massProperties(piece.faces).volume;
+          const geometricTotal = split.properties.reduce(
+            (sum, part) => sum + part.volume,
+            0,
+          );
+          const retainedFraction = fracture
+            ? 1
+            : clamp(geometricTotal / currentVolume, 0, 1);
+          const retainedMass = piece.volume * retainedFraction;
+          split.properties.forEach(
+            (part) =>
+              (part.volume = (retainedMass * part.volume) / geometricTotal),
+          );
+          const lostVolume = piece.volume - retainedMass;
+          const origin = piece.mesh.localToWorld(split.origin.clone());
+          const seam = split.ring.map((p) =>
+            piece.mesh.localToWorld(p.clone()),
+          );
+          const direction = worldPlane.normal;
+
+          const separationImpulse =
+            ((mode === "simple" ? 1.1 : 0.08) *
+              feel.cut *
+              energy *
+              split.properties[0].volume *
+              split.properties[1].volume) /
+            piece.volume;
+          const children = [];
+          split.halves.forEach((faces, index) => {
+            const sign = index === 0 ? 1 : -1;
+            const seeds = piece.seeds.filter(
+              (seed) => sign * localPlane.distanceToPoint(seed.point) > 0.046,
+            );
+            const localTravel = travel.clone().transformDirection(inverse);
+            faces[faces.length - 1].cut = { travel: localTravel };
+            const child = addPiece(
+              faces,
+              seeds,
+              split.properties[index],
+              piece,
+            );
+            children.push(child);
+            const arm = origin.clone().sub(child.body.position);
+            child.body.position.addScaledVector(direction, sign * 0.002);
+            applyImpulse(child, arm, direction, sign * separationImpulse);
+            if (!fracture) {
+              const grip = 0.18 * feel.friction * energy;
+              child.velocity.addScaledVector(travel, grip);
+            }
+
+            child.springVelocity = (mode === "simple" ? -1.6 : -0.12) * energy;
+            if (mode === "simple") {
+              child.velocity.y += reducedMotion ? 0.15 : 0.65;
+              child.angular.add(vec(sign * 0.3, sign * 0.2, sign * 0.55));
+            }
+            updateCollider(child);
+          });
+          removePiece(piece);
+          if (mode === "advanced" && depth < 0.98)
+            bridgeCut(children[0], children[1], worldPlane, depth, travel);
+          spray(seam, origin, worldPlane.normal, energy, travel, lostVolume);
+          return true;
+        }
+
+        function cutPlane(from, to) {
+          return new THREE.Plane().setFromCoplanarPoints(
+            camera.position,
+            throughScreen(from),
+            throughScreen(to),
+          );
+        }
+
+        function hitAt(at, meshes) {
+          raycaster.setFromCamera(ndc(at), camera);
+          return raycaster.intersectObjects(meshes, false)[0]?.object;
+        }
+
+        function finishSlice(from, to, energy) {
+          cuts++;
+          for (const piece of pieces) {
+            piece.body.position.y -= Math.min(0, groundContact(piece).gap);
+          }
+          updateCounts();
+          sound(energy);
+          hint.textContent = boardFull()
+            ? "Board full · Start with a new watermelon"
+            : "Tap or swipe to slice again";
+          showStroke(from, to);
+          traceUntil = performance.now() + 145;
+        }
+
+        function applySwipe(from, to, elapsed) {
+          if (boardFull() || from.distanceTo(to) < 12) return false;
+          scene.updateMatrixWorld(true);
+          const distance = from.distanceTo(to);
+          const steps = clamp(Math.ceil(distance / 8), 3, 100);
+          const meshes = pieces.map((piece) => piece.mesh);
+          const targets = new Set();
+          for (let i = 0; i <= steps; i++) {
+            const hit = hitAt(from.clone().lerp(to, i / steps), meshes);
+            if (hit) targets.add(hit);
+          }
+          const plane = cutPlane(from, to);
+          const energy =
+            (reducedMotion ? 0.67 : 1) *
+            clamp(0.8 + (distance / Math.max(elapsed, 65)) * 0.46, 0.82, 1.44);
+          let count = 0;
+          for (const piece of [...pieces]) {
+            if (pieces.length >= maxPieces) break;
+            if (
+              targets.has(piece.mesh) &&
+              splitPiece(
+                piece,
+                plane,
+                energy,
+                throughScreen(to).sub(throughScreen(from)).normalize(),
+                false,
+                clamp(distance / 210, 0.2, 1),
+              )
+            )
+              count++;
+          }
+          if (!count) return false;
+          finishSlice(from, to, energy);
+          return true;
+        }
+
+        function screenPosition(world) {
+          const projected = world.clone().project(camera);
+          return new THREE.Vector2(
+            ((projected.x + 1) * stage.clientWidth) / 2,
+            ((1 - projected.y) * stage.clientHeight) / 2,
+          );
+        }
+
+        function applyTap(at, keyboard = false) {
+          if (boardFull()) return false;
+          scene.updateMatrixWorld(true);
+          const hit = keyboard
+            ? null
+            : hitAt(
+                at,
+                pieces.map((piece) => piece.mesh),
+              );
+          const piece = keyboard
+            ? pieces.reduce((largest, candidate) =>
+                candidate.volume > largest.volume ? candidate : largest,
+              )
+            : pieces.find((candidate) => candidate.mesh === hit);
+          if (!piece) return false;
+          const bridge = bridges.find(
+            (link) => link.a === piece || link.b === piece,
+          );
+          if (bridge) {
+            bridges.splice(bridges.indexOf(bridge), 1);
+            wakeMaterial();
+            cuts++;
+            updateCounts();
+            hint.textContent = "Cut through the remaining tissue";
+            return true;
+          }
+
+          const center = screenPosition(piece.body.position);
+          const anchors = keyboard ? [center] : [at];
+          const energy = reducedMotion ? 0.67 : 1;
+          for (const anchor of anchors) {
+            for (const tilt of [
+              0.24 + 0.14 * Math.sin(cuts * 2.17),
+              -0.72,
+              1.15,
+            ]) {
+              const direction = new THREE.Vector2(-tilt, 1).normalize();
+              const from = anchor.clone().addScaledVector(direction, -48);
+              const to = anchor.clone().addScaledVector(direction, 24);
+              if (
+                splitPiece(
+                  piece,
+                  cutPlane(from, to),
+                  energy,
+                  throughScreen(to).sub(throughScreen(from)).normalize(),
+                  false,
+                  keyboard ? 1 : 0.6,
+                )
+              ) {
+                finishSlice(from, to, energy);
+                return true;
+              }
+            }
+          }
+          return false;
+        }
+
+        function reset() {
+          stainBatch.geometry =
+            mode === "simple" ? simpleStainGeometry : advancedStainGeometry;
+          stainBatch.material.color.setHex(
+            mode === "simple" ? 0xf69caa : 0xffc9b5,
+          );
+          stainBatch.material.opacity = mode === "simple" ? 0.36 : 0.38;
+          stainBatch.castShadow = stainBatch.receiveShadow = mode !== "simple";
+          dropletBatch.material.color.setHex(
+            mode === "simple" ? 0xffa4b4 : 0xffc2a3,
+          );
+          dropletBatch.castShadow = mode !== "simple";
+          document.querySelector(
+            "#feel-softness",
+          ).previousElementSibling.firstChild.nodeValue =
+            mode === "simple" ? "Wobble" : "Flesh softness";
+          bridges.length = 0;
+          wakeMaterial();
+          if (drag) endDrag();
+          for (const piece of [...pieces]) removePiece(piece);
+          droplets.length = 0;
+          pendingSpray.length = 0;
+          crumbs.length = 0;
+          splashRings.length = 0;
+          stains.length = 0;
+          cuts = 0;
+          traceUntil = 0;
+          knife.position.copy(parkedKnifePosition);
+          knife.quaternion.copy(parkedKnifeRotation);
+          svg.setAttribute("hidden", "");
+          const faces = fruitHull();
+          materialBudget.initial = massProperties(faces).volume;
+          materialBudget.liquid = materialBudget.pulp = 0;
+          const seeds = seedLayout.flatMap(([x, y, angle]) => [
+            { point: vec(x, y, 0.484), angle },
+            { point: vec(-x, y, -0.484), angle: -angle },
+          ]);
+          const whole = addPiece(faces, seeds, massProperties(faces));
+          if (mode === "advanced") {
+            whole.soft = makeSoftBody(whole);
+            whole.asleep = true;
+            whole.supported = true;
+            drawMaterial(whole);
+            syncSoftFaces(whole);
+            smoothSurface(whole.mesh.geometry);
+            whole.mesh.geometry.computeBoundingSphere();
+            refreshSoftCollider(whole);
+          } else {
+            updateCollider(whole);
+            refitSurface(whole.mesh);
+          }
+          updateCounts();
+          hint.textContent =
+            mode === "simple"
+              ? "Tap to slice · Hold to squish"
+              : "Tap or swipe across the fruit";
+        }
+
+        function endDrag() {
+          const previous = drag;
+          drag = null;
+          for (const piece of pieces) piece.dragPressure = 0;
+          if (stage.hasPointerCapture(previous.id))
+            stage.releasePointerCapture(previous.id);
+          svg.setAttribute("hidden", "");
+          return previous;
+        }
+
+        stage.addEventListener("pointerdown", (event) => {
+          if (drag || boardFull() || !event.isPrimary || event.button !== 0)
+            return;
+          const start = point(event);
+          wakeMaterial();
+          const target = hitAt(
+            start,
+            pieces.map((p) => p.mesh),
+          );
+          const selected = pieces.find((p) => p.mesh === target);
+          if (selected) {
+            const hit = raycaster.intersectObject(target, false)[0];
+            selected.pressPoint = hit.point.clone();
+            selected.pressDirection = raycaster.ray.direction.clone();
+            selected.dragPressure = 0.08;
+          }
+          drag = {
+            id: event.pointerId,
+            start,
+            since: performance.now(),
+            sliced: false,
+            moved: false,
+          };
+          stage.setPointerCapture(event.pointerId);
+          showStroke(start, start, false);
+        });
+        stage.addEventListener("pointermove", (event) => {
+          if (drag?.id !== event.pointerId) return;
+          const end = point(event);
+          if (drag.sliced) {
+            showStroke(drag.start, end, false);
+            return;
+          }
+          drag.moved ||= drag.start.distanceTo(end) >= 12;
+          showStroke(drag.start, end, drag.moved);
+          if (
+            drag.moved &&
+            applySwipe(drag.start, end, performance.now() - drag.since)
+          ) {
+            drag.sliced = true;
+            for (const piece of pieces) piece.dragPressure = 0;
+            return;
+          }
+          const hit = hitAt(
+            end,
+            pieces.map((piece) => piece.mesh),
+          );
+          for (const piece of pieces)
+            piece.dragPressure = piece.mesh === hit ? 0.06 : 0;
+        });
+        stage.addEventListener("pointerup", (event) => {
+          if (drag?.id !== event.pointerId) return;
+          const previous = endDrag();
+          if (previous.sliced) return;
+          const end = point(event);
+          if (previous.moved || previous.start.distanceTo(end) >= 12) {
+            applySwipe(previous.start, end, performance.now() - previous.since);
+          } else {
+            applyTap(end);
+          }
+        });
+        for (const name of ["pointercancel", "lostpointercapture"]) {
+          stage.addEventListener(name, (event) => {
+            if (drag?.id === event.pointerId) endDrag();
+          });
+        }
+
+        stage.addEventListener("keydown", (event) => {
+          if (event.repeat || (event.key !== "Enter" && event.key !== " "))
+            return;
+          event.preventDefault();
+          applyTap(null, true);
+        });
+        resetLink.addEventListener("click", (event) => {
+          event.preventDefault();
+          reset();
+        });
+
+        const tuner = document.querySelector("#tuner"),
+          editFeel = document.querySelector("#editFeel");
+        function closeTuner() {
+          tuner.hidden = true;
+          editFeel.setAttribute("aria-expanded", "false");
+          editFeel.focus();
+        }
+        editFeel.addEventListener("click", () => {
+          tuner.hidden = !tuner.hidden;
+          editFeel.setAttribute("aria-expanded", String(!tuner.hidden));
+          if (!tuner.hidden) tuner.querySelector("input").focus();
+        });
+        document
+          .querySelector("#closeFeel")
+          .addEventListener("click", closeTuner);
+        tuner.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            closeTuner();
+          }
+        });
+        function showFeel() {
+          for (const input of tuner.querySelectorAll("[data-feel]")) {
+            const k = input.dataset.feel;
+            input.value = feel[k];
+            document.querySelector("#value-" + k).value =
+              k === "juice"
+                ? `${Math.round(feel[k] / 0.001)} / 10`
+                : k === "friction"
+                  ? `${Math.round(feel[k] * 100)}%`
+                  : `${feel[k].toFixed(1)}×`;
+          }
+        }
+        tuner.addEventListener("input", (e) => {
+          const k = e.target.dataset.feel;
+          if (!k) return;
+          feel[k] = Number(e.target.value);
+          showFeel();
+          wakeMaterial();
+        });
+        document.querySelector("#defaultFeel").addEventListener("click", () => {
+          Object.assign(feel, defaultFeel);
+          showFeel();
+          wakeMaterial();
+        });
+        showFeel();
+        for (const button of document.querySelectorAll(".mode-switch button"))
+          button.addEventListener("click", () => {
+            if (mode === button.dataset.mode) return;
+            mode = button.dataset.mode;
+            document.body.dataset.mode = mode;
+            for (const other of document.querySelectorAll(
+              ".mode-switch button",
+            ))
+              other.setAttribute("aria-pressed", String(other === button));
+            tuner.hidden = true;
+            editFeel.setAttribute("aria-expanded", "false");
+            document.querySelector(".tuner p").textContent =
+              mode === "simple"
+                ? "More wobble, more splash. Hold the fruit to give it a squeeze."
+                : "Change the feel. Hold to press, tap to nick, or swipe for a deeper cut.";
+            reset();
+          });
+        new ResizeObserver(resize).observe(stage);
+        resize();
+        reset();
+        let lastTime = performance.now();
+        let fpsSince = lastTime;
+        let frames = 0;
+        let qualitySince = 0;
+        let accumulator = 0;
+        const step = 1 / 60;
+        renderer.setAnimationLoop((time) => {
+          const frameTime = clamp((time - lastTime) / 1000, 0, 0.05);
+          // Bound catch-up work so a slow rendered frame cannot start a CPU spiral.
+          accumulator = Math.min(accumulator + frameTime, 2 * step);
+          frames++;
+          if (time - fpsSince >= 650) {
+            const measuredFPS = (frames * 1000) / (time - fpsSince);
+            fps.textContent = `${Math.round(measuredFPS)} fps`;
+            if (time - qualitySince > 5000 && measuredFPS < 38) {
+              renderer.setPixelRatio(
+                Math.max(0.8, renderer.getPixelRatio() * 0.85),
+              );
+              qualitySince = time;
+            }
+            frames = 0;
+            fpsSince = time;
+          }
+          lastTime = time;
+          while (accumulator >= step) {
+            if (mode === "simple") simpleStep(step);
+            else softStep(step);
+            accumulator -= step;
+          }
+          for (const p of pieces)
+            if (p.materialDirty) {
+              drawMaterial(p);
+              p.materialDirty = false;
+            }
+          stepLiquid(Math.min(frameTime, 1 / 30));
+          stepPlayfulEffects(Math.min(frameTime, 1 / 30));
+          paintLiquid();
+          if (!drag && time >= traceUntil) {
+            svg.setAttribute("hidden", "");
+            const returnAmount = reducedMotion
+              ? 1
+              : 1 - Math.exp(-14 * frameTime);
+            knife.position.lerp(parkedKnifePosition, returnAmount);
+            knife.quaternion.slerp(parkedKnifeRotation, returnAmount);
+          }
+          for (const p of pieces)
+            if (p.surfaceDirty) {
+              smoothSurface(p.mesh.geometry);
+              p.mesh.geometry.computeBoundingSphere();
+              p.surfaceDirty = false;
+            }
+          renderer.render(scene, camera);
+        });
+      }
+    </script>
+  </body>
+</html>
